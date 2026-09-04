@@ -22,6 +22,9 @@ export interface TrafficReport {
   comment?: string
   authorId: string
   confirmations: number
+  // Non prevu explicitement par CLAUDE.md §4 mais necessaire pour respecter
+  // la regle DESIGN.md §5.4 "un seul vote par uid" sur Oui/dégagé.
+  confirmedBy: string[]
   createdAt: Timestamp
   expiresAt: Timestamp
 }

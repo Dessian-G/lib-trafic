@@ -39,9 +39,7 @@ function App() {
           <MapPage
             userPosition={position}
             onRequestPosition={requestPosition}
-            onOpenReport={() => {
-              // Ouverture de ReportModal : étape 4
-            }}
+            onNavigateToRoute={() => setTab('itineraire')}
           />
         )}
         {tab === 'itineraire' && <RoutePage />}

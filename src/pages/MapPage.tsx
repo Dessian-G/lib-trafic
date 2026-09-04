@@ -1,10 +1,17 @@
 import { Locate, Search, SlidersHorizontal } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import MapView, { type MapViewHandle } from '../components/MapView'
 import ReportButton from '../components/ReportButton'
+import ReportModal from '../components/ReportModal'
+import ReportSheet from '../components/ReportSheet'
 import TrafficLegend from '../components/TrafficLegend'
+import { CARTE_CENTRE } from '../data/libreville'
+import { useAuthUid } from '../hooks/useAuthUid'
 import type { GeoPosition } from '../hooks/useGeolocation'
-import type { Repere } from '../types'
+import { useTrafficReports } from '../hooks/useTrafficReports'
+import { nearestAxe, nearestWithDistance } from '../lib/geo'
+import { niveauAxe } from '../lib/traffic'
+import type { Axe, Repere } from '../types'
 
 type Filtre = 'tout' | 'bouchons' | 'accidents' | 'sites'
 
@@ -15,25 +22,49 @@ const FILTRES: { id: Filtre; label: string }[] = [
   { id: 'sites', label: 'Sites' },
 ]
 
+const SEUIL_CARREFOUR_M = 400
+const SEUIL_AXE_M = 500
+
 interface MapPageProps {
   userPosition: GeoPosition | null
   onRequestPosition: () => void
-  onOpenReport: () => void
+  onNavigateToRoute: () => void
 }
 
-export default function MapPage({ userPosition, onRequestPosition, onOpenReport }: MapPageProps) {
+export default function MapPage({ userPosition, onRequestPosition, onNavigateToRoute }: MapPageProps) {
   const mapHandleRef = useRef<MapViewHandle | null>(null)
   const [recenterSignal, setRecenterSignal] = useState(0)
   const [filtre, setFiltre] = useState<Filtre>('tout')
   const [query, setQuery] = useState('')
   const [reperes, setReperes] = useState<Repere[]>([])
+  const [axes, setAxes] = useState<Axe[]>([])
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [draftPosition, setDraftPosition] = useState<GeoPosition | null>(null)
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+
+  const uid = useAuthUid()
+  const reports = useTrafficReports()
 
   useEffect(() => {
     fetch('/data/quartiers.json')
       .then((res) => res.json())
       .then(setReperes)
       .catch(() => setReperes([]))
+    fetch('/data/axes.json')
+      .then((res) => res.json())
+      .then(setAxes)
+      .catch(() => setAxes([]))
   }, [])
+
+  const selectedReport = useMemo(
+    () => reports.find((r) => r.id === selectedReportId) ?? null,
+    [reports, selectedReportId],
+  )
+
+  const axesAvecNiveau = useMemo(
+    () => axes.map((axe) => ({ axe, niveau: niveauAxe(axe, reports) })),
+    [axes, reports],
+  )
 
   const resultats =
     query.trim().length > 0
@@ -55,9 +86,46 @@ export default function MapPage({ userPosition, onRequestPosition, onOpenReport 
     setQuery('')
   }
 
+  const handleOpenReport = () => {
+    setDraftPosition(userPosition ?? CARTE_CENTRE)
+    setReportModalOpen(true)
+  }
+
+  const quartiers = useMemo(() => reperes.filter((r) => r.type === 'quartier'), [reperes])
+  const carrefours = useMemo(() => reperes.filter((r) => r.type === 'carrefour'), [reperes])
+
+  const { positionLabel, quartierNom, axeNom } = useMemo(() => {
+    if (!draftPosition) return { positionLabel: 'Position actuelle', quartierNom: undefined, axeNom: undefined }
+    const quartierProche = nearestWithDistance(draftPosition, quartiers)
+    const carrefourProche = nearestWithDistance(draftPosition, carrefours)
+    const axeProche = nearestAxe(draftPosition, axes)
+
+    const quartier = quartierProche?.item.name
+    const axe = axeProche && axeProche.distance <= SEUIL_AXE_M ? axeProche.axe.name : undefined
+    const carrefour =
+      carrefourProche && carrefourProche.distance <= SEUIL_CARREFOUR_M
+        ? carrefourProche.item.name
+        : undefined
+
+    const label = carrefour
+      ? [carrefour, quartier].filter(Boolean).join(' · ')
+      : (quartier ?? 'Position actuelle')
+
+    return { positionLabel: label, quartierNom: quartier, axeNom: axe }
+  }, [draftPosition, quartiers, carrefours, axes])
+
   return (
     <div className="relative h-full w-full">
-      <MapView userPosition={userPosition} recenterSignal={recenterSignal} mapRef={mapHandleRef} />
+      <MapView
+        userPosition={userPosition}
+        recenterSignal={recenterSignal}
+        mapRef={mapHandleRef}
+        reports={reports}
+        onSelectReport={(r) => setSelectedReportId(r.id)}
+        axesAvecNiveau={axesAvecNiveau}
+        draftPosition={reportModalOpen ? draftPosition : null}
+        onDraftPositionChange={setDraftPosition}
+      />
 
       <div className="absolute inset-x-0 top-0 z-10 px-[22px] pt-[52px]">
         <div className="flex items-center gap-2">
@@ -114,6 +182,14 @@ export default function MapPage({ userPosition, onRequestPosition, onOpenReport 
         </div>
       </div>
 
+      {reports.length === 0 && (
+        <div className="absolute left-1/2 top-[130px] z-10 w-[280px] -translate-x-1/2 rounded-card bg-[rgba(251,247,240,.94)] px-4 py-3 text-center shadow-[0_6px_20px_rgba(22,33,28,.14)]">
+          <p className="text-sm text-ink-600">
+            Aucun signalement actif autour de vous. Soyez le premier à signaler.
+          </p>
+        </div>
+      )}
+
       <div className="absolute bottom-[18px] left-[18px] z-10">
         <TrafficLegend />
       </div>
@@ -127,8 +203,26 @@ export default function MapPage({ userPosition, onRequestPosition, onOpenReport 
         >
           <Locate size={20} />
         </button>
-        <ReportButton onClick={onOpenReport} />
+        <ReportButton onClick={handleOpenReport} />
       </div>
+
+      <ReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        position={draftPosition}
+        positionLabel={positionLabel}
+        quartierNom={quartierNom}
+        axeNom={axeNom}
+      />
+
+      {selectedReport && (
+        <ReportSheet
+          report={selectedReport}
+          uid={uid}
+          onClose={() => setSelectedReportId(null)}
+          onAvoidRoute={onNavigateToRoute}
+        />
+      )}
     </div>
   )
 }

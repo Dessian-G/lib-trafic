@@ -1,7 +1,11 @@
 import L from 'leaflet'
-import { useEffect, useRef, type MutableRefObject } from 'react'
+import { Ban, CarFront, HardHat, ShieldAlert, TriangleAlert, Waves } from 'lucide-react'
+import { useEffect, useRef, type ComponentType, type MutableRefObject } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { CARTE_CENTRE, CARTE_ZOOM_DEFAUT } from '../data/libreville'
 import type { GeoPosition } from '../hooks/useGeolocation'
+import { NIVEAU_COULEURS } from '../lib/traffic'
+import type { Axe, ReportType, Severity, TrafficReport } from '../types'
 
 const USER_ICON = L.divIcon({
   className: '',
@@ -10,20 +14,81 @@ const USER_ICON = L.divIcon({
   iconAnchor: [11, 11],
 })
 
+const DRAFT_ICON = L.divIcon({
+  className: '',
+  html: '<div style="width:34px;height:34px;border-radius:12px 12px 12px 4px;background:#E8A317;box-shadow:0 6px 14px rgba(0,0,0,.25)"></div>',
+  iconSize: [34, 34],
+  iconAnchor: [8, 32],
+})
+
+const TYPE_ICONS: Record<ReportType, ComponentType<{ size?: number; color?: string }>> = {
+  embouteillage: CarFront,
+  accident: TriangleAlert,
+  route_barree: Ban,
+  travaux: HardHat,
+  controle_police: ShieldAlert,
+  inondation: Waves,
+  fluide: CarFront,
+}
+
+const PROCHE_EXPIRATION_MS = 10 * 60 * 1000
+
+function createReportIcon(report: TrafficReport): L.DivIcon {
+  const Icon = TYPE_ICONS[report.type]
+  const svg = renderToStaticMarkup(<Icon size={18} color="#fff" />)
+  const opacity = report.expiresAt.toMillis() - Date.now() <= PROCHE_EXPIRATION_MS ? 0.6 : 1
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:38px;height:38px;border-radius:12px 12px 12px 4px;background:${NIVEAU_COULEURS[report.severity]};display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.25);opacity:${opacity}">${svg}</div>`,
+    iconSize: [38, 38],
+    iconAnchor: [8, 36],
+  })
+}
+
+function niveauLargeur(zoom: number): number {
+  return zoom >= 14 ? 9 : 6
+}
+
 export interface MapViewHandle {
   flyTo: (position: GeoPosition, zoom?: number) => void
+}
+
+interface AxeAvecNiveau {
+  axe: Axe
+  niveau: Severity | null
 }
 
 interface MapViewProps {
   userPosition: GeoPosition | null
   recenterSignal: number
   mapRef: MutableRefObject<MapViewHandle | null>
+  reports: TrafficReport[]
+  onSelectReport: (report: TrafficReport) => void
+  axesAvecNiveau: AxeAvecNiveau[]
+  draftPosition: GeoPosition | null
+  onDraftPositionChange: (position: GeoPosition) => void
 }
 
-export default function MapView({ userPosition, recenterSignal, mapRef }: MapViewProps) {
+export default function MapView({
+  userPosition,
+  recenterSignal,
+  mapRef,
+  reports,
+  onSelectReport,
+  axesAvecNiveau,
+  draftPosition,
+  onDraftPositionChange,
+}: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<L.Map | null>(null)
   const userMarkerRef = useRef<L.Marker | null>(null)
+  const draftMarkerRef = useRef<L.Marker | null>(null)
+  const reportMarkersRef = useRef<Map<string, L.Marker>>(new Map())
+  const polylinesRef = useRef<Map<string, L.Polyline>>(new Map())
+  const onSelectReportRef = useRef(onSelectReport)
+  const onDraftPositionChangeRef = useRef(onDraftPositionChange)
+  onSelectReportRef.current = onSelectReport
+  onDraftPositionChangeRef.current = onDraftPositionChange
 
   useEffect(() => {
     if (!containerRef.current || leafletMapRef.current) return
@@ -76,5 +141,102 @@ export default function MapView({ userPosition, recenterSignal, mapRef }: MapVie
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recenterSignal])
 
-  return <div ref={containerRef} className="absolute inset-0" />
+  // Marqueurs de signalements : synchronise la Map Leaflet avec `reports`.
+  useEffect(() => {
+    const map = leafletMapRef.current
+    if (!map) return
+    const current = reportMarkersRef.current
+    const idsVus = new Set<string>()
+
+    for (const report of reports) {
+      idsVus.add(report.id)
+      const existant = current.get(report.id)
+      if (existant) {
+        existant.setLatLng([report.lat, report.lng])
+        existant.setIcon(createReportIcon(report))
+      } else {
+        const marker = L.marker([report.lat, report.lng], { icon: createReportIcon(report) })
+        marker.on('click', () => onSelectReportRef.current(report))
+        marker.addTo(map)
+        current.set(report.id, marker)
+      }
+    }
+
+    for (const [id, marker] of current) {
+      if (!idsVus.has(id)) {
+        marker.remove()
+        current.delete(id)
+      }
+    }
+  }, [reports])
+
+  // Axes colores selon le niveau de trafic agrege (CLAUDE.md §6).
+  useEffect(() => {
+    const map = leafletMapRef.current
+    if (!map) return
+    const current = polylinesRef.current
+    const idsVus = new Set<string>()
+    const weight = niveauLargeur(map.getZoom())
+
+    for (const { axe, niveau } of axesAvecNiveau) {
+      const points = axe.path.filter(
+        (p): p is { name: string; lat: number; lng: number } => p.lat !== null && p.lng !== null,
+      )
+      if (niveau === null || points.length < 2) continue
+      idsVus.add(axe.id)
+      const latlngs = points.map((p): [number, number] => [p.lat, p.lng])
+      const existant = current.get(axe.id)
+      if (existant) {
+        existant.setLatLngs(latlngs)
+        existant.setStyle({ color: NIVEAU_COULEURS[niveau], weight })
+      } else {
+        const polyline = L.polyline(latlngs, {
+          color: NIVEAU_COULEURS[niveau],
+          weight,
+          opacity: 0.9,
+          lineCap: 'round',
+        }).addTo(map)
+        current.set(axe.id, polyline)
+      }
+    }
+
+    for (const [id, polyline] of current) {
+      if (!idsVus.has(id)) {
+        polyline.remove()
+        current.delete(id)
+      }
+    }
+  }, [axesAvecNiveau])
+
+  useEffect(() => {
+    const map = leafletMapRef.current
+    if (!map) return
+
+    if (!draftPosition) {
+      draftMarkerRef.current?.remove()
+      draftMarkerRef.current = null
+      return
+    }
+
+    if (!draftMarkerRef.current) {
+      const marker = L.marker([draftPosition.lat, draftPosition.lng], {
+        icon: DRAFT_ICON,
+        draggable: true,
+        zIndexOffset: 2000,
+      })
+      marker.on('dragend', () => {
+        const { lat, lng } = marker.getLatLng()
+        onDraftPositionChangeRef.current({ lat, lng })
+      })
+      marker.addTo(map)
+      draftMarkerRef.current = marker
+    } else {
+      draftMarkerRef.current.setLatLng([draftPosition.lat, draftPosition.lng])
+    }
+  }, [draftPosition])
+
+  // isolate : Leaflet pose ses panes internes a des z-index allant jusqu'a
+  // 700 ; sans nouveau contexte d'empilement ici, ils passeraient au-dessus
+  // des superpositions (recherche, feuilles) malgre leurs z-index plus bas.
+  return <div ref={containerRef} className="absolute inset-0 isolate" />
 }

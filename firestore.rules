@@ -12,18 +12,25 @@ service cloud.firestore {
 
       allow create: if isSignedIn()
         && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.confirmedBy == []
         && request.resource.data.type in
           ['embouteillage', 'accident', 'route_barree', 'travaux', 'controle_police', 'inondation', 'fluide']
         && request.resource.data.severity in [1, 2, 3, 4]
         && (!('comment' in request.resource.data) || request.resource.data.comment.size() <= 140);
 
       // L'auteur peut modifier son propre signalement ; n'importe quel usager
-      // connecté peut uniquement incrémenter `confirmations` (et repousser
-      // `expiresAt`), cf. DESIGN.md §5.4 "Toujours là ?".
+      // connecté peut voter une seule fois (DESIGN.md §5.4 "Toujours là ?") :
+      // "Oui" incremente confirmations et repousse expiresAt, "C'est dégagé"
+      // ne touche que confirmedBy + expiresAt (mise a expiration immediate).
       allow update: if isSignedIn() && (
         resource.data.authorId == request.auth.uid ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmations', 'expiresAt'])
-          && request.resource.data.confirmations == resource.data.confirmations + 1)
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmations', 'expiresAt', 'confirmedBy'])
+          && !(request.auth.uid in resource.data.confirmedBy)
+          && request.resource.data.confirmedBy == resource.data.confirmedBy.concat([request.auth.uid])
+          && request.resource.data.confirmations >= resource.data.confirmations
+          && request.resource.data.confirmations <= resource.data.confirmations + 1
+        )
       );
 
       allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
