@@ -1,0 +1,132 @@
+[
+  {
+    "id": "eglise-saint-michel-nkembo",
+    "name": "Église Saint-Michel de Nkembo",
+    "category": "religieux",
+    "lat": null,
+    "lng": null,
+    "quartier": "Nkembo",
+    "description": "Remarquable pour ses colonnes en bois sculptées représentant des scènes bibliques.",
+    "source": null
+  },
+  {
+    "id": "cathedrale-sainte-marie",
+    "name": "Cathédrale Sainte-Marie",
+    "category": "religieux",
+    "lat": 0.402805,
+    "lng": 9.436287,
+    "quartier": "Sainte-Marie",
+    "description": "Cathédrale du centre-ville, repère religieux du quartier de la Baie des Rois.",
+    "source": "Nominatim: Cathédrale Notre-Dame de L'Assomption, Baie des Rois, Vallée Sainte-Marie"
+  },
+  {
+    "id": "marche-mont-bouet",
+    "name": "Marché du Mont-Bouët",
+    "category": "marche",
+    "lat": 0.401251,
+    "lng": 9.451915,
+    "quartier": "Mont-Bouët",
+    "description": "Le plus grand marché du Gabon.",
+    "source": "Nominatim: Marché Mont-Bouët, Plaine Orety, Mont Bouet"
+  },
+  {
+    "id": "musee-national-arts-traditions",
+    "name": "Musée National des Arts, Rites et Traditions du Gabon",
+    "category": "culturel",
+    "lat": null,
+    "lng": null,
+    "quartier": "Bord de mer",
+    "description": "Musée national dédié aux arts, rites et traditions du Gabon, situé en bord de mer.",
+    "source": null
+  },
+  {
+    "id": "memorial-leon-mba",
+    "name": "Mémorial Léon Mba",
+    "category": "monument",
+    "lat": 0.39106,
+    "lng": 9.445688,
+    "quartier": "Centre-Ville",
+    "description": "Mémorial dédié à Léon Mba, premier président du Gabon.",
+    "source": "Nominatim: Mémorial du Président Léon Mba, Avenue Félix Eboué, Baie des Rois"
+  },
+  {
+    "id": "boulevard-bord-de-mer",
+    "name": "Boulevard du Bord de Mer",
+    "category": "culturel",
+    "lat": null,
+    "lng": null,
+    "quartier": "Centre-Ville",
+    "description": "Promenade en bord de mer ornée de sculptures gabonaises.",
+    "source": null
+  },
+  {
+    "id": "stele-de-la-liberte",
+    "name": "Stèle de la Liberté",
+    "category": "monument",
+    "lat": 0.391549,
+    "lng": 9.440669,
+    "quartier": "Centre-Ville",
+    "description": "Œuvre de l'artiste Minko Minzé marquant la fin de la traite en 1849, près de l'ancien palais présidentiel.",
+    "source": "Nominatim: Stèle de la liberté, Boulevard de l'Indépendance, Baie des Rois"
+  },
+  {
+    "id": "palais-presidentiel",
+    "name": "Palais Présidentiel",
+    "category": "monument",
+    "lat": 0.392483,
+    "lng": 9.442064,
+    "quartier": "Centre-Ville",
+    "description": "Palais présidentiel du Gabon (visite extérieure uniquement).",
+    "source": "Nominatim: Palais Présidentiel, Boulevard de l'Indépendance, Baie des Rois"
+  },
+  {
+    "id": "plage-de-la-sabliere",
+    "name": "Plage de la Sablière",
+    "category": "plage",
+    "lat": null,
+    "lng": null,
+    "quartier": null,
+    "description": "Plage prisée du Grand Libreville.",
+    "source": null
+  },
+  {
+    "id": "pointe-denis",
+    "name": "Pointe-Denis",
+    "category": "plage",
+    "lat": 0.329185,
+    "lng": 9.365424,
+    "quartier": "Pointe-Denis",
+    "description": "Plage accessible en ~30 min de bateau depuis Libreville.",
+    "source": "Nominatim: Pointe Denis, Komo-Océan"
+  },
+  {
+    "id": "arboretum-raponda-walker",
+    "name": "Arboretum Raponda-Walker",
+    "category": "nature",
+    "lat": null,
+    "lng": null,
+    "quartier": null,
+    "description": "Arboretum botanique aux abords de Libreville.",
+    "source": null
+  },
+  {
+    "id": "parc-national-akanda",
+    "name": "Parc National d'Akanda",
+    "category": "nature",
+    "lat": 0.581085,
+    "lng": 9.536742,
+    "quartier": "Akanda",
+    "description": "Mangroves et plages à environ 16 km au nord de Libreville.",
+    "source": "Nominatim: Parc National d'Akanda, Komo-Mondah"
+  },
+  {
+    "id": "centre-culturel-saint-exupery",
+    "name": "Centre Culturel Saint-Exupéry",
+    "category": "culturel",
+    "lat": null,
+    "lng": null,
+    "quartier": null,
+    "description": "Centre culturel proposant expositions et évènements artistiques.",
+    "source": null
+  }
+]

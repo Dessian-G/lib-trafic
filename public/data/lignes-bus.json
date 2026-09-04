@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sogatra-sainte-marie-ntoum",
+    "operator": "Sogatra",
+    "name": "Sainte-Marie – Ntoum",
+    "stops": ["Sainte-Marie", "Gare routière", "Rio", "PK12", "Nkoltang", "Ntoum"]
+  },
+  {
+    "id": "transurb-reseau",
+    "operator": "Trans'Urb",
+    "stops": [],
+    "note": "Dessertes internes à Libreville et Owendo. Lignes et arrêts précis non détaillés dans les données sources — TODO à compléter auprès de l'opérateur."
+  },
+  {
+    "id": "transakanda-reseau",
+    "operator": "Trans Akanda",
+    "stops": ["Angondjé", "Akanda"],
+    "note": "Dessert le nord du Grand Libreville (environ 5 lignes selon les données sources). Tracé et arrêts précis non détaillés — TODO à compléter auprès de l'opérateur."
+  }
+]

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "rn1-axe-pk",
+    "name": "RN1 / axe des PK",
+    "path": [
+      { "name": "Ancienne Gare routière", "lat": 0.403235, "lng": 9.451249 },
+      { "name": "Rio", "lat": 0.405714, "lng": 9.464379 },
+      { "name": "PK5", "lat": 0.406563, "lng": 9.467718 },
+      { "name": "PK8", "lat": 0.411153, "lng": 9.494239 },
+      { "name": "PK12", "lat": null, "lng": null },
+      { "name": "Ntoum", "lat": 0.391315, "lng": 9.758872 }
+    ],
+    "note": "Artère la plus embouteillée de la banlieue sud. PK12 non résolu par geocodage (TODO)."
+  },
+  {
+    "id": "axe-owendo-aeroport",
+    "name": "Axe Owendo ↔ Aéroport Léon-Mba",
+    "path": [
+      { "name": "Owendo", "lat": 0.320823, "lng": 9.495274 },
+      { "name": "Aéroport Léon-Mba", "lat": 0.466504, "lng": 9.416338 }
+    ],
+    "note": "Port et zone industrielle. Tracé simplifié à 2 points ; TODO relevé du tracé réel (Overpass/OSM)."
+  },
+  {
+    "id": "boulevard-triomphal-omar-bongo",
+    "name": "Boulevard Triomphal Omar Bongo",
+    "path": [{ "name": "Boulevard Triomphal Omar Bongo", "lat": 0.420293, "lng": 9.453245 }],
+    "note": "Centre administratif. Un seul point connu ; TODO polyline complète."
+  },
+  {
+    "id": "boulevard-bord-de-mer",
+    "name": "Boulevard du Bord de Mer",
+    "path": [{ "name": "Boulevard du Bord de Mer", "lat": null, "lng": null }],
+    "note": "Front de mer. Non résolu par geocodage (TODO)."
+  },
+  {
+    "id": "axe-nzeng-ayong-centre-ville",
+    "name": "Axe Nzeng-Ayong ↔ centre-ville",
+    "path": [
+      { "name": "Nzeng-Ayong", "lat": 0.427122, "lng": 9.482219 },
+      { "name": "Centre-ville", "lat": 0.4162, "lng": 9.4673 }
+    ],
+    "note": "Tracé simplifié à 2 points ; TODO relevé du tracé réel."
+  },
+  {
+    "id": "axe-gare-routiere-melen",
+    "name": "Axe Ancienne Gare routière ↔ Melen",
+    "path": [
+      { "name": "Ancienne Gare routière", "lat": 0.403235, "lng": 9.451249 },
+      { "name": "Melen", "lat": 0.399735, "lng": 9.514858 }
+    ],
+    "note": "Tracé simplifié à 2 points ; TODO relevé du tracé réel."
+  }
+]

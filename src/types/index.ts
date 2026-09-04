@@ -45,10 +45,47 @@ export interface TouristSite {
   id: string
   name: string
   category: TouristCategory
-  lat: number
-  lng: number
-  quartier: string
+  lat: number | null // null tant que la coordonnee n'est pas verifiee (TODO)
+  lng: number | null
+  quartier: string | null
   description: string
   photo?: string
   hours?: string
+  source: string | null
+}
+
+export type Commune = 'Libreville' | 'Owendo' | 'Akanda' | 'Ntoum'
+
+// Quartier ou carrefour/point chaud (CLAUDE.md §7) : meme forme, discriminee
+// par `type`, pour rester dans le seul fichier public/data/quartiers.json
+// prevu par la structure du depot (§3).
+export interface Repere {
+  id: string
+  name: string
+  type: 'quartier' | 'carrefour'
+  commune: Commune | null
+  lat: number | null
+  lng: number | null
+  source: string | null
+}
+
+export interface AxePoint {
+  name: string
+  lat: number | null
+  lng: number | null
+}
+
+export interface Axe {
+  id: string
+  name: string
+  path: AxePoint[]
+  note?: string
+}
+
+export interface BusLine {
+  id: string
+  operator: 'Sogatra' | "Trans'Urb" | 'Trans Akanda'
+  name?: string
+  stops: string[]
+  note?: string
 }
