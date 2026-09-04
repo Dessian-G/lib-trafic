@@ -1,5 +1,5 @@
 import { Locate, Search, SlidersHorizontal } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import MapView, { type MapViewHandle } from '../components/MapView'
 import ReportButton from '../components/ReportButton'
 import ReportModal from '../components/ReportModal'
@@ -8,10 +8,9 @@ import TrafficLegend from '../components/TrafficLegend'
 import { CARTE_CENTRE } from '../data/libreville'
 import { useAuthUid } from '../hooks/useAuthUid'
 import type { GeoPosition } from '../hooks/useGeolocation'
-import { useTrafficReports } from '../hooks/useTrafficReports'
 import { nearestAxe, nearestWithDistance } from '../lib/geo'
-import { niveauAxe } from '../lib/traffic'
-import type { Axe, Repere } from '../types'
+import type { AxeAvecNiveau } from '../lib/traffic'
+import type { Repere, TrafficReport } from '../types'
 
 type Filtre = 'tout' | 'bouchons' | 'accidents' | 'sites'
 
@@ -29,41 +28,33 @@ interface MapPageProps {
   userPosition: GeoPosition | null
   onRequestPosition: () => void
   onNavigateToRoute: () => void
+  reperes: Repere[]
+  reports: TrafficReport[]
+  axesAvecNiveau: AxeAvecNiveau[]
 }
 
-export default function MapPage({ userPosition, onRequestPosition, onNavigateToRoute }: MapPageProps) {
+export default function MapPage({
+  userPosition,
+  onRequestPosition,
+  onNavigateToRoute,
+  reperes,
+  reports,
+  axesAvecNiveau,
+}: MapPageProps) {
   const mapHandleRef = useRef<MapViewHandle | null>(null)
   const [recenterSignal, setRecenterSignal] = useState(0)
   const [filtre, setFiltre] = useState<Filtre>('tout')
   const [query, setQuery] = useState('')
-  const [reperes, setReperes] = useState<Repere[]>([])
-  const [axes, setAxes] = useState<Axe[]>([])
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [draftPosition, setDraftPosition] = useState<GeoPosition | null>(null)
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
   const uid = useAuthUid()
-  const reports = useTrafficReports()
-
-  useEffect(() => {
-    fetch('/data/quartiers.json')
-      .then((res) => res.json())
-      .then(setReperes)
-      .catch(() => setReperes([]))
-    fetch('/data/axes.json')
-      .then((res) => res.json())
-      .then(setAxes)
-      .catch(() => setAxes([]))
-  }, [])
+  const axes = useMemo(() => axesAvecNiveau.map((a) => a.axe), [axesAvecNiveau])
 
   const selectedReport = useMemo(
     () => reports.find((r) => r.id === selectedReportId) ?? null,
     [reports, selectedReportId],
-  )
-
-  const axesAvecNiveau = useMemo(
-    () => axes.map((axe) => ({ axe, niveau: niveauAxe(axe, reports) })),
-    [axes, reports],
   )
 
   const resultats =

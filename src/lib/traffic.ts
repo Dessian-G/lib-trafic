@@ -73,3 +73,27 @@ export function niveauAxe(axe: Axe, reports: TrafficReport[]): Severity | null {
   }
   return niveau
 }
+
+export interface AxeAvecNiveau {
+  axe: Axe
+  niveau: Severity | null
+}
+
+const SEUIL_CROISEMENT_AXE_METRES = 120
+
+// Premier axe de niveau 4 (bloque) que le trace d'un itineraire recoupe,
+// pour l'avertissement de RoutePage (CLAUDE.md §5.3).
+export function axeBloqueTraverse(
+  geometrieLngLat: [number, number][],
+  axesAvecNiveau: AxeAvecNiveau[],
+): Axe | null {
+  const bloques = axesAvecNiveau.filter((a) => a.niveau === 4)
+  if (bloques.length === 0) return null
+  for (const [lng, lat] of geometrieLngLat) {
+    for (const { axe } of bloques) {
+      const distance = distancePointPolylineMetres({ lat, lng }, axe.path)
+      if (distance !== null && distance <= SEUIL_CROISEMENT_AXE_METRES) return axe
+    }
+  }
+  return null
+}
