@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /reports/{reportId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.type in
+          ['embouteillage', 'accident', 'route_barree', 'travaux', 'controle_police', 'inondation', 'fluide']
+        && request.resource.data.severity in [1, 2, 3, 4]
+        && (!('comment' in request.resource.data) || request.resource.data.comment.size() <= 140);
+
+      // L'auteur peut modifier son propre signalement ; n'importe quel usager
+      // connecté peut uniquement incrémenter `confirmations` (et repousser
+      // `expiresAt`), cf. DESIGN.md §5.4 "Toujours là ?".
+      allow update: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmations', 'expiresAt'])
+          && request.resource.data.confirmations == resource.data.confirmations + 1)
+      );
+
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+  }
+}
