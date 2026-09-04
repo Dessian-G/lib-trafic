@@ -1,11 +1,53 @@
+import { useState } from 'react'
+import BottomNav, { type TabId } from './components/BottomNav'
+import Onboarding from './components/Onboarding'
+import { useGeolocation } from './hooks/useGeolocation'
+import MapPage from './pages/MapPage'
+import RoutePage from './pages/RoutePage'
+import TourismPage from './pages/TourismPage'
+
+const ONBOARDING_KEY = 'libtrafic_onboarding_done'
+
 function App() {
+  const [onboardingDone, setOnboardingDone] = useState(
+    () => localStorage.getItem(ONBOARDING_KEY) === '1',
+  )
+  const [tab, setTab] = useState<TabId>('carte')
+  const { position, requestPosition } = useGeolocation()
+
+  const finishOnboarding = () => {
+    localStorage.setItem(ONBOARDING_KEY, '1')
+    setOnboardingDone(true)
+  }
+
+  if (!onboardingDone) {
+    return (
+      <Onboarding
+        onAuthorize={() => {
+          requestPosition()
+          finishOnboarding()
+        }}
+        onSkip={finishOnboarding}
+      />
+    )
+  }
+
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-btn bg-brand-600 font-display text-2xl font-bold text-[#F7E7C3]">
-        L
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-sand-50">
+      <div className="relative flex-1 overflow-hidden">
+        {tab === 'carte' && (
+          <MapPage
+            userPosition={position}
+            onRequestPosition={requestPosition}
+            onOpenReport={() => {
+              // Ouverture de ReportModal : étape 4
+            }}
+          />
+        )}
+        {tab === 'itineraire' && <RoutePage />}
+        {tab === 'sites' && <TourismPage />}
       </div>
-      <h1 className="font-display text-3xl font-bold tracking-[-0.02em]">Lib'Trafic</h1>
-      <p className="text-ink-500">Socle du projet en place — écrans à venir.</p>
+      <BottomNav active={tab} onChange={setTab} />
     </div>
   )
 }
