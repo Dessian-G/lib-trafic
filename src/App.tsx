@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import BottomNav, { type TabId } from './components/BottomNav'
 import Onboarding from './components/Onboarding'
+import type { LocationValue } from './components/RoutePlanner'
 import { useGeolocation } from './hooks/useGeolocation'
 import { useTrafficReports } from './hooks/useTrafficReports'
 import { niveauAxe } from './lib/traffic'
@@ -16,6 +17,7 @@ function App() {
     () => localStorage.getItem(ONBOARDING_KEY) === '1',
   )
   const [tab, setTab] = useState<TabId>('carte')
+  const [presetArrivee, setPresetArrivee] = useState<LocationValue | null>(null)
   const { position, requestPosition } = useGeolocation()
 
   const [reperes, setReperes] = useState<Repere[]>([])
@@ -73,9 +75,20 @@ function App() {
             reperes={reperes}
             sites={sites}
             axesAvecNiveau={axesAvecNiveau}
+            presetArrivee={presetArrivee}
           />
         )}
-        {tab === 'sites' && <TourismPage />}
+        {tab === 'sites' && (
+          <TourismPage
+            sites={sites}
+            reperes={reperes}
+            userPosition={position}
+            onNavigateToSite={(arrivee) => {
+              setPresetArrivee(arrivee)
+              setTab('itineraire')
+            }}
+          />
+        )}
       </div>
       <BottomNav active={tab} onChange={setTab} />
     </div>
