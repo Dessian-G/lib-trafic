@@ -4,8 +4,11 @@ import { useEffect, useState, type ComponentType } from 'react'
 import { auth, db } from '../firebase'
 import { useAuthUid } from '../hooks/useAuthUid'
 import type { GeoPosition } from '../hooks/useGeolocation'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { DUREE_PAR_TYPE_MIN, NIVEAU_LABELS, SEVERITE_PAR_DEFAUT, TYPE_LABELS } from '../lib/traffic'
 import type { ReportType, Severity } from '../types'
+
+const HAS_REPORTED_KEY = 'libtrafic_has_reported'
 
 const TYPES: { id: ReportType; icon: ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'embouteillage', icon: CarFront },
@@ -38,6 +41,7 @@ export default function ReportModal({
   axeNom,
 }: ReportModalProps) {
   const uid = useAuthUid()
+  const { online } = useOnlineStatus()
   const [type, setType] = useState<ReportType>('embouteillage')
   const [severity, setSeverity] = useState<Severity>(SEVERITE_PAR_DEFAUT.embouteillage)
   const [comment, setComment] = useState('')
@@ -76,7 +80,7 @@ export default function ReportModal({
     setErrorMessage(null)
     try {
       const dureeMs = DUREE_PAR_TYPE_MIN[type] * 60 * 1000
-      await addDoc(collection(db, 'reports'), {
+      const ecriture = addDoc(collection(db, 'reports'), {
         type,
         severity,
         lat: position.lat,
@@ -90,7 +94,20 @@ export default function ReportModal({
         ...(quartierNom ? { quartier: quartierNom } : {}),
         ...(axeNom ? { axe: axeNom } : {}),
       })
+
+      if (online) {
+        await ecriture
+      } else {
+        // Hors ligne, la promesse Firestore ne se resout qu'au retour du
+        // reseau (le SDK rejoue l'ecriture depuis le cache local persistant) :
+        // on ne l'attend pas pour eviter de bloquer l'UI indefiniment.
+        ecriture.catch((error: unknown) => {
+          console.error('Échec différé de synchronisation du signalement :', error)
+        })
+      }
+
       localStorage.setItem(THROTTLE_KEY, String(Date.now()))
+      localStorage.setItem(HAS_REPORTED_KEY, '1')
       setComment('')
       onClose()
     } catch {
@@ -178,7 +195,9 @@ export default function ReportModal({
             ? `Publier le signalement (${remaining}s)`
             : submitting
               ? 'Publication…'
-              : 'Publier le signalement'}
+              : online
+                ? 'Publier le signalement'
+                : 'Publier (envoi à la reconnexion)'}
         </button>
       </div>
     </div>

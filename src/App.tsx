@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import BottomNav, { type TabId } from './components/BottomNav'
+import InstallPrompt from './components/InstallPrompt'
+import OfflineBanner from './components/OfflineBanner'
 import Onboarding from './components/Onboarding'
 import type { LocationValue } from './components/RoutePlanner'
 import { useGeolocation } from './hooks/useGeolocation'
+import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { useTrafficReports } from './hooks/useTrafficReports'
 import { niveauAxe } from './lib/traffic'
 import MapPage from './pages/MapPage'
@@ -19,6 +22,7 @@ function App() {
   const [tab, setTab] = useState<TabId>('carte')
   const [presetArrivee, setPresetArrivee] = useState<LocationValue | null>(null)
   const { position, requestPosition } = useGeolocation()
+  const { online, offlineSince } = useOnlineStatus()
 
   const [reperes, setReperes] = useState<Repere[]>([])
   const [axes, setAxes] = useState<Axe[]>([])
@@ -39,6 +43,13 @@ function App() {
     [axes, reports],
   )
 
+  // L'itineraire exige le reseau (ORS) : si on passe hors ligne pendant qu'on
+  // y est, on revient sur la carte plutot que de laisser un onglet devenu
+  // inaccessible depuis la nav rester affiche (DESIGN.md §5.7).
+  useEffect(() => {
+    if (!online && tab === 'itineraire') setTab('carte')
+  }, [online, tab])
+
   const finishOnboarding = () => {
     localStorage.setItem(ONBOARDING_KEY, '1')
     setOnboardingDone(true)
@@ -57,7 +68,8 @@ function App() {
   }
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-sand-50">
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-sand-50">
+      <OfflineBanner offlineSince={offlineSince} />
       <div className="relative flex-1 overflow-hidden">
         {tab === 'carte' && (
           <MapPage
@@ -67,6 +79,7 @@ function App() {
             reperes={reperes}
             reports={reports}
             axesAvecNiveau={axesAvecNiveau}
+            offline={!online}
           />
         )}
         {tab === 'itineraire' && (
@@ -90,7 +103,8 @@ function App() {
           />
         )}
       </div>
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav active={tab} onChange={setTab} offline={!online} />
+      <InstallPrompt />
     </div>
   )
 }

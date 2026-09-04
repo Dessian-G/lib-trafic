@@ -1,6 +1,11 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, signInAnonymously, type Auth } from 'firebase/auth'
-import { getFirestore, type Firestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -22,7 +27,15 @@ export let db: Firestore | undefined
 if (isConfigured) {
   const app = initializeApp(firebaseConfig)
   auth = getAuth(app)
-  db = getFirestore(app)
+  // Cache local persistant : les reports restent lisibles hors ligne (dernier
+  // etat connu) et les ecritures faites hors ligne se rejouent au retour du
+  // reseau — c'est le mecanisme "NetworkFirst avec repli sur le cache" de
+  // CLAUDE.md §10 pour la collection `reports`, gere par le SDK plutot que
+  // par le service worker (Firestore ne passe pas par de simples requetes
+  // HTTP interceptables).
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  })
   signInAnonymously(auth).catch((error: unknown) => {
     console.error('Échec de la connexion anonyme Firebase :', error)
   })

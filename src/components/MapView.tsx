@@ -67,6 +67,7 @@ interface MapViewProps {
   axesAvecNiveau: AxeAvecNiveau[]
   draftPosition: GeoPosition | null
   onDraftPositionChange: (position: GeoPosition) => void
+  offline?: boolean
 }
 
 export default function MapView({
@@ -78,6 +79,7 @@ export default function MapView({
   axesAvecNiveau,
   draftPosition,
   onDraftPositionChange,
+  offline,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const leafletMapRef = useRef<L.Map | null>(null)
@@ -177,6 +179,8 @@ export default function MapView({
     const current = polylinesRef.current
     const idsVus = new Set<string>()
     const weight = niveauLargeur(map.getZoom())
+    // DESIGN.md §5.7 : axes a 55% d'opacite hors ligne (donnees potentiellement perimees).
+    const opacity = offline ? 0.55 : 0.9
 
     for (const { axe, niveau } of axesAvecNiveau) {
       const points = axe.path.filter(
@@ -188,12 +192,12 @@ export default function MapView({
       const existant = current.get(axe.id)
       if (existant) {
         existant.setLatLngs(latlngs)
-        existant.setStyle({ color: NIVEAU_COULEURS[niveau], weight })
+        existant.setStyle({ color: NIVEAU_COULEURS[niveau], weight, opacity })
       } else {
         const polyline = L.polyline(latlngs, {
           color: NIVEAU_COULEURS[niveau],
           weight,
-          opacity: 0.9,
+          opacity,
           lineCap: 'round',
         }).addTo(map)
         current.set(axe.id, polyline)
@@ -206,7 +210,7 @@ export default function MapView({
         current.delete(id)
       }
     }
-  }, [axesAvecNiveau])
+  }, [axesAvecNiveau, offline])
 
   useEffect(() => {
     const map = leafletMapRef.current
@@ -238,5 +242,11 @@ export default function MapView({
   // isolate : Leaflet pose ses panes internes a des z-index allant jusqu'a
   // 700 ; sans nouveau contexte d'empilement ici, ils passeraient au-dessus
   // des superpositions (recherche, feuilles) malgre leurs z-index plus bas.
-  return <div ref={containerRef} className="absolute inset-0 isolate" />
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 isolate"
+      style={offline ? { filter: 'saturate(.5)' } : undefined}
+    />
+  )
 }

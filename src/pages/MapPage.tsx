@@ -31,6 +31,7 @@ interface MapPageProps {
   reperes: Repere[]
   reports: TrafficReport[]
   axesAvecNiveau: AxeAvecNiveau[]
+  offline: boolean
 }
 
 export default function MapPage({
@@ -40,6 +41,7 @@ export default function MapPage({
   reperes,
   reports,
   axesAvecNiveau,
+  offline,
 }: MapPageProps) {
   const mapHandleRef = useRef<MapViewHandle | null>(null)
   const [recenterSignal, setRecenterSignal] = useState(0)
@@ -116,6 +118,7 @@ export default function MapPage({
         axesAvecNiveau={axesAvecNiveau}
         draftPosition={reportModalOpen ? draftPosition : null}
         onDraftPositionChange={setDraftPosition}
+        offline={offline}
       />
 
       <div className="absolute inset-x-0 top-0 z-10 px-[22px] pt-[52px]">
@@ -125,8 +128,9 @@ export default function MapPage({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un quartier, un axe…"
-              className="h-full flex-1 bg-transparent text-[15px] text-ink-900 outline-none placeholder:text-ink-400"
+              disabled={offline}
+              placeholder={offline ? 'Recherche indisponible hors ligne' : 'Rechercher un quartier, un axe…'}
+              className="h-full flex-1 bg-transparent text-[15px] text-ink-900 outline-none placeholder:text-ink-400 disabled:cursor-not-allowed"
             />
           </div>
           <button
@@ -194,7 +198,7 @@ export default function MapPage({
         >
           <Locate size={20} />
         </button>
-        <ReportButton onClick={handleOpenReport} />
+        <ReportButton onClick={handleOpenReport} offline={offline} />
       </div>
 
       <ReportModal

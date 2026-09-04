@@ -11,9 +11,10 @@ const TABS: { id: TabId; label: string; icon: typeof Map }[] = [
 interface BottomNavProps {
   active: TabId
   onChange: (tab: TabId) => void
+  offline?: boolean
 }
 
-export default function BottomNav({ active, onChange }: BottomNavProps) {
+export default function BottomNav({ active, onChange, offline }: BottomNavProps) {
   return (
     <nav
       className="flex shrink-0 items-stretch border-t border-sand-200 bg-sand-50 pb-[env(safe-area-inset-bottom)]"
@@ -21,19 +22,19 @@ export default function BottomNav({ active, onChange }: BottomNavProps) {
     >
       {TABS.map(({ id, label, icon: Icon }) => {
         const isActive = id === active
+        // L'itineraire exige le reseau (ORS) : desactive hors ligne (DESIGN.md §5.7).
+        const isDisabled = offline && id === 'itineraire'
+        const color = isDisabled ? 'text-ink-300' : isActive ? 'text-brand-600' : 'text-ink-400'
         return (
           <button
             key={id}
             type="button"
-            onClick={() => onChange(id)}
+            onClick={() => !isDisabled && onChange(id)}
+            disabled={isDisabled}
             className="flex flex-1 flex-col items-center justify-center gap-1"
           >
-            <Icon size={22} className={isActive ? 'text-brand-600' : 'text-ink-400'} />
-            <span
-              className={`text-[11px] font-semibold ${isActive ? 'text-brand-600' : 'text-ink-400'}`}
-            >
-              {label}
-            </span>
+            <Icon size={22} className={color} />
+            <span className={`text-[11px] font-semibold ${color}`}>{label}</span>
           </button>
         )
       })}
