@@ -5,6 +5,7 @@ interface UseRouteResult {
   routes: OrsRoute[]
   loading: boolean
   error: string | null
+  retry: () => void
 }
 
 export function useRoute(
@@ -16,6 +17,7 @@ export function useRoute(
   const [routes, setRoutes] = useState<OrsRoute[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!depart || !arrivee) {
@@ -45,7 +47,7 @@ export function useRoute(
     return () => {
       annule = true
     }
-  }, [profile, depart?.lat, depart?.lng, arrivee?.lat, arrivee?.lng, alternatives])
+  }, [profile, depart?.lat, depart?.lng, arrivee?.lat, arrivee?.lng, alternatives, retryCount])
 
-  return { routes, loading, error }
+  return { routes, loading, error, retry: () => setRetryCount((n) => n + 1) }
 }

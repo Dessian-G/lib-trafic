@@ -30,6 +30,8 @@ interface MapPageProps {
   onNavigateToRoute: () => void
   reperes: Repere[]
   reports: TrafficReport[]
+  reportsError: boolean
+  onRetryReports: () => void
   axesAvecNiveau: AxeAvecNiveau[]
   offline: boolean
 }
@@ -40,6 +42,8 @@ export default function MapPage({
   onNavigateToRoute,
   reperes,
   reports,
+  reportsError,
+  onRetryReports,
   axesAvecNiveau,
   offline,
 }: MapPageProps) {
@@ -121,35 +125,48 @@ export default function MapPage({
         offline={offline}
       />
 
+      {reportsError && (
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-sand-100 px-[22px] py-2 text-sm dark:bg-night-700">
+          <span className="text-ink-700 dark:text-mist-200">Signalements indisponibles.</span>
+          <button
+            type="button"
+            onClick={onRetryReports}
+            className="font-semibold text-brand-600 dark:text-brand-300"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
       <div className="absolute inset-x-0 top-0 z-10 px-[22px] pt-[52px]">
         <div className="flex items-center gap-2">
-          <div className="flex h-[52px] flex-1 items-center gap-2 rounded-card bg-[rgba(251,247,240,.94)] px-4 shadow-[0_6px_20px_rgba(22,33,28,.14)] backdrop-blur">
-            <Search size={18} className="text-ink-400" />
+          <div className="flex h-[52px] flex-1 items-center gap-2 rounded-card bg-[rgba(251,247,240,.94)] px-4 shadow-[0_6px_20px_rgba(22,33,28,.14)] backdrop-blur dark:bg-[rgba(25,32,28,.9)]">
+            <Search size={18} className="text-ink-400 dark:text-mist-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               disabled={offline}
               placeholder={offline ? 'Recherche indisponible hors ligne' : 'Rechercher un quartier, un axe…'}
-              className="h-full flex-1 bg-transparent text-[15px] text-ink-900 outline-none placeholder:text-ink-400 disabled:cursor-not-allowed"
+              className="h-full flex-1 bg-transparent text-[15px] text-ink-900 outline-none placeholder:text-ink-400 disabled:cursor-not-allowed dark:text-mist-50 dark:placeholder:text-mist-500"
             />
           </div>
           <button
             type="button"
             aria-label="Filtres"
-            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[rgba(251,247,240,.94)] shadow-[0_6px_20px_rgba(22,33,28,.14)]"
+            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[rgba(251,247,240,.94)] shadow-[0_6px_20px_rgba(22,33,28,.14)] dark:bg-[rgba(25,32,28,.9)]"
           >
-            <SlidersHorizontal size={16} className="text-ink-700" />
+            <SlidersHorizontal size={16} className="text-ink-700 dark:text-mist-200" />
           </button>
         </div>
 
         {resultats.length > 0 && (
-          <ul className="mt-2 overflow-hidden rounded-card bg-sand-50 shadow-[0_6px_20px_rgba(22,33,28,.14)]">
+          <ul className="mt-2 overflow-hidden rounded-card bg-sand-50 shadow-[0_6px_20px_rgba(22,33,28,.14)] dark:bg-night-800">
             {resultats.map((r) => (
               <li key={r.id}>
                 <button
                   type="button"
                   onClick={() => handleSelectRepere(r)}
-                  className="flex h-11 w-full items-center px-4 text-left text-sm text-ink-900 active:bg-sand-100"
+                  className="flex h-11 w-full items-center px-4 text-left text-sm text-ink-900 active:bg-sand-100 dark:text-mist-50 dark:active:bg-night-700"
                 >
                   {r.name}
                 </button>
@@ -167,7 +184,9 @@ export default function MapPage({
                 type="button"
                 onClick={() => setFiltre(id)}
                 className={`h-8 shrink-0 rounded-full px-3 text-[13px] font-semibold ${
-                  isActive ? 'bg-brand-600 text-white' : 'bg-sand-100 text-ink-600'
+                  isActive
+                    ? 'bg-brand-600 text-white'
+                    : 'bg-sand-100 text-ink-600 dark:bg-night-700 dark:text-mist-200'
                 }`}
               >
                 {label}
@@ -175,15 +194,15 @@ export default function MapPage({
             )
           })}
         </div>
-      </div>
 
-      {reports.length === 0 && (
-        <div className="absolute left-1/2 top-[130px] z-10 w-[280px] -translate-x-1/2 rounded-card bg-[rgba(251,247,240,.94)] px-4 py-3 text-center shadow-[0_6px_20px_rgba(22,33,28,.14)]">
-          <p className="text-sm text-ink-600">
-            Aucun signalement actif autour de vous. Soyez le premier à signaler.
-          </p>
-        </div>
-      )}
+        {reports.length === 0 && (
+          <div className="mx-auto mt-3 w-[280px] rounded-card bg-[rgba(251,247,240,.94)] px-4 py-3 text-center shadow-[0_6px_20px_rgba(22,33,28,.14)] dark:bg-[rgba(25,32,28,.9)]">
+            <p className="text-sm text-ink-600 dark:text-mist-200">
+              Aucun signalement actif autour de vous. Soyez le premier à signaler.
+            </p>
+          </div>
+        )}
+      </div>
 
       <div className="absolute bottom-[18px] left-[18px] z-10">
         <TrafficLegend />

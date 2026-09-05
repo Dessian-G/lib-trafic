@@ -1,6 +1,6 @@
 import { arrayUnion, doc, increment, Timestamp, updateDoc } from 'firebase/firestore'
 import { Ban, CarFront, HardHat, ShieldAlert, TriangleAlert, Waves } from 'lucide-react'
-import { useState, type ComponentType } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import { db } from '../firebase'
 import { DUREE_PAR_TYPE_MIN, NIVEAU_COULEURS, TYPE_LABELS } from '../lib/traffic'
 import type { ReportType, TrafficReport } from '../types'
@@ -37,8 +37,14 @@ interface ReportSheetProps {
 
 export default function ReportSheet({ report, uid, onClose, onAvoidRoute }: ReportSheetProps) {
   const [pending, setPending] = useState(false)
+  const [entered, setEntered] = useState(false)
   const dejaVote = uid !== null && report.confirmedBy.includes(uid)
   const Icon = TYPE_ICONS[report.type]
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   const vote = async (confirmer: boolean) => {
     if (!db || !uid || dejaVote || pending) return
@@ -67,10 +73,12 @@ export default function ReportSheet({ report, uid, onClose, onAvoidRoute }: Repo
   return (
     <div className="absolute inset-0 z-20 flex items-end bg-[rgba(16,21,18,.45)]" onClick={onClose}>
       <div
-        className="w-full rounded-t-sheet bg-sand-50 px-6 pb-6 pt-3"
+        className={`w-full rounded-t-sheet bg-sand-50 px-6 pb-6 pt-3 transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-night-800 ${
+          entered ? 'translate-y-0' : 'translate-y-full'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-[5px] w-11 rounded-full bg-sand-300" />
+        <div className="mx-auto mb-3 h-[5px] w-11 rounded-full bg-sand-300 dark:bg-night-500" />
 
         <div className="flex items-center gap-3">
           <div
@@ -80,50 +88,54 @@ export default function ReportSheet({ report, uid, onClose, onAvoidRoute }: Repo
             <Icon size={22} color="#fff" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-xl font-bold">{TYPE_LABELS[report.type]}</h2>
+            <h2 className="font-display text-xl font-bold dark:text-mist-50">
+              {TYPE_LABELS[report.type]}
+            </h2>
             {(report.axe || report.quartier) && (
-              <p className="truncate text-sm text-ink-500">
+              <p className="truncate text-sm text-ink-500 dark:text-mist-200">
                 {[report.axe, report.quartier].filter(Boolean).join(' · ')}
               </p>
             )}
           </div>
-          <span className="shrink-0 rounded-full bg-[#FBE4E2] px-3 py-1 text-xs font-semibold text-[#A5251B]">
+          <span className="shrink-0 rounded-full bg-[#FBE4E2] px-3 py-1 text-xs font-semibold text-[#A5251B] dark:bg-[#4A2320] dark:text-[#F2564A]">
             Niveau {report.severity}
           </span>
         </div>
 
         {report.comment && (
-          <p className="mt-4 rounded-field bg-sand-100 p-3 text-sm text-ink-700">
+          <p className="mt-4 rounded-field bg-sand-100 p-3 text-sm text-ink-700 dark:bg-night-700 dark:text-mist-200">
             {report.comment}
           </p>
         )}
 
         <div className="mt-4 flex justify-between text-center">
           <div>
-            <p className="text-xs text-ink-400">Signalé</p>
-            <p className="text-[15px] font-bold text-ink-900">
+            <p className="text-xs text-ink-400 dark:text-mist-400">Signalé</p>
+            <p className="text-[15px] font-bold text-ink-900 dark:text-mist-50">
               {formatRelative(Date.now() - report.createdAt.toMillis())}
             </p>
           </div>
           <div>
-            <p className="text-xs text-ink-400">Expire</p>
-            <p className="text-[15px] font-bold text-ink-900">
+            <p className="text-xs text-ink-400 dark:text-mist-400">Expire</p>
+            <p className="text-[15px] font-bold text-ink-900 dark:text-mist-50">
               {formatDelai(report.expiresAt.toMillis() - Date.now())}
             </p>
           </div>
           <div>
-            <p className="text-xs text-ink-400">Confirmé par</p>
-            <p className="text-[15px] font-bold text-ink-900">{report.confirmations}</p>
+            <p className="text-xs text-ink-400 dark:text-mist-400">Confirmé par</p>
+            <p className="text-[15px] font-bold text-ink-900 dark:text-mist-50">
+              {report.confirmations}
+            </p>
           </div>
         </div>
 
-        <p className="mt-5 text-sm font-semibold text-ink-900">Toujours là ?</p>
+        <p className="mt-5 text-sm font-semibold text-ink-900 dark:text-mist-50">Toujours là ?</p>
         <div className="mt-2 flex gap-3">
           <button
             type="button"
             disabled={dejaVote || pending || !uid}
             onClick={() => vote(true)}
-            className="h-[54px] flex-1 rounded-btn bg-brand-600 font-semibold text-white disabled:bg-sand-200 disabled:text-ink-300"
+            className="h-[54px] flex-1 rounded-btn bg-brand-600 font-semibold text-white disabled:bg-sand-200 disabled:text-ink-300 dark:disabled:bg-night-700 dark:disabled:text-mist-500"
           >
             Oui, toujours
           </button>
@@ -131,12 +143,16 @@ export default function ReportSheet({ report, uid, onClose, onAvoidRoute }: Repo
             type="button"
             disabled={dejaVote || pending || !uid}
             onClick={() => vote(false)}
-            className="h-[54px] flex-1 rounded-btn border border-sand-300 font-semibold text-ink-700 disabled:text-ink-300"
+            className="h-[54px] flex-1 rounded-btn border border-sand-300 font-semibold text-ink-700 disabled:text-ink-300 dark:border-night-500 dark:text-mist-200 dark:disabled:text-mist-500"
           >
             C'est dégagé
           </button>
         </div>
-        {dejaVote && <p className="mt-2 text-center text-xs text-ink-400">Vous avez déjà voté.</p>}
+        {dejaVote && (
+          <p className="mt-2 text-center text-xs text-ink-400 dark:text-mist-400">
+            Vous avez déjà voté.
+          </p>
+        )}
 
         <button
           type="button"
@@ -144,7 +160,7 @@ export default function ReportSheet({ report, uid, onClose, onAvoidRoute }: Repo
             onAvoidRoute()
             onClose()
           }}
-          className="mt-4 w-full text-center text-sm font-semibold text-ocean-600"
+          className="mt-4 w-full text-center text-sm font-semibold text-ocean-600 dark:text-ocean-400"
         >
           Recalculer mon itinéraire en évitant ce point
         </button>

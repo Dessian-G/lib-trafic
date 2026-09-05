@@ -28,7 +28,9 @@ export default function TransportPicker({ value, onChange }: TransportPickerProp
             type="button"
             onClick={() => onChange(mode)}
             className={`flex h-[66px] flex-col items-center justify-center gap-1 rounded-card ${
-              isActive ? 'bg-brand-600 text-white' : 'bg-sand-100 text-ink-600'
+              isActive
+                ? 'bg-brand-600 text-white'
+                : 'bg-sand-100 text-ink-600 dark:bg-night-700 dark:text-mist-200'
             }`}
           >
             <Icon size={19} />

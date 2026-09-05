@@ -52,18 +52,18 @@ function LocationField({
         }}
         onBlur={() => setTimeout(() => setEditing(false), 150)}
         placeholder={placeholder}
-        className={`h-[52px] w-full rounded-field bg-sand-100 px-4 text-[15px] text-ink-900 outline-none placeholder:text-ink-400 ${
+        className={`h-[52px] w-full rounded-field bg-sand-100 px-4 text-[15px] text-ink-900 outline-none placeholder:text-ink-400 dark:bg-night-700 dark:text-mist-50 dark:placeholder:text-mist-500 ${
           editing ? 'border-2 border-brand-600' : ''
         }`}
       />
       {editing && (
-        <ul className="absolute left-0 right-0 top-[56px] z-10 overflow-hidden rounded-card bg-sand-50 shadow-[0_6px_20px_rgba(22,33,28,.14)]">
+        <ul className="absolute left-0 right-0 top-[56px] z-10 overflow-hidden rounded-card bg-sand-50 shadow-[0_6px_20px_rgba(22,33,28,.14)] dark:bg-night-800">
           {maPositionDisponible && (
             <li>
               <button
                 type="button"
                 onMouseDown={() => onUseMaPosition()}
-                className="flex h-11 w-full items-center px-4 text-left text-sm font-semibold text-ocean-600 active:bg-sand-100"
+                className="flex h-11 w-full items-center px-4 text-left text-sm font-semibold text-ocean-600 active:bg-sand-100 dark:text-ocean-400 dark:active:bg-night-700"
               >
                 Ma position
               </button>
@@ -74,7 +74,7 @@ function LocationField({
               <button
                 type="button"
                 onMouseDown={() => onChange({ label: o.name, lat: o.lat, lng: o.lng })}
-                className="flex h-11 w-full items-center px-4 text-left text-sm text-ink-900 active:bg-sand-100"
+                className="flex h-11 w-full items-center px-4 text-left text-sm text-ink-900 active:bg-sand-100 dark:text-mist-50 dark:active:bg-night-700"
               >
                 {o.name}
               </button>
@@ -116,7 +116,7 @@ export default function RoutePlanner({
       <div className="flex items-center gap-3">
         <div className="flex h-[108px] flex-col items-center justify-between py-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-ocean-600" />
-          <span className="w-px flex-1 bg-sand-300" />
+          <span className="w-px flex-1 bg-sand-300 dark:bg-night-500" />
           <span className="h-2.5 w-2.5 rounded-full bg-accent-500" />
         </div>
         <div className="flex flex-1 flex-col gap-2">
@@ -141,7 +141,7 @@ export default function RoutePlanner({
           type="button"
           aria-label="Inverser départ et arrivée"
           onClick={onSwap}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sand-100 text-ink-600"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sand-100 text-ink-600 dark:bg-night-700 dark:text-mist-200"
         >
           <ArrowUpDown size={18} />
         </button>

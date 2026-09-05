@@ -48,6 +48,7 @@ export default function ReportModal({
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [remaining, setRemaining] = useState(0)
+  const [entered, setEntered] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -59,6 +60,15 @@ export default function ReportModal({
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      setEntered(false)
+      return
+    }
+    const raf = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(raf)
   }, [open])
 
   if (!open) return null
@@ -120,11 +130,15 @@ export default function ReportModal({
   return (
     <div className="absolute inset-0 z-20 flex items-end bg-[rgba(16,21,18,.45)]" onClick={onClose}>
       <div
-        className="w-full rounded-t-sheet bg-sand-50 px-6 pb-6 pt-3"
+        className={`w-full rounded-t-sheet bg-sand-50 px-6 pb-6 pt-3 transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-night-800 ${
+          entered ? 'translate-y-0' : 'translate-y-full'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-[5px] w-11 rounded-full bg-sand-300" />
-        <h2 className="text-center font-display text-xl font-bold">Que se passe-t-il ?</h2>
+        <div className="mx-auto mb-3 h-[5px] w-11 rounded-full bg-sand-300 dark:bg-night-500" />
+        <h2 className="text-center font-display text-xl font-bold dark:text-mist-50">
+          Que se passe-t-il ?
+        </h2>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           {TYPES.map(({ id, icon: Icon }) => {
@@ -136,8 +150,8 @@ export default function ReportModal({
                 onClick={() => handleSelectType(id)}
                 className={`flex flex-col items-center gap-2 rounded-card border-2 px-3.5 py-2 ${
                   isActive
-                    ? 'border-traffic-3 bg-[#FDF0E4] text-[#8A4708]'
-                    : 'border-transparent bg-sand-100 text-ink-700'
+                    ? 'border-traffic-3 bg-[#FDF0E4] text-[#8A4708] dark:bg-night-700 dark:text-traffic-3-dark'
+                    : 'border-transparent bg-sand-100 text-ink-700 dark:bg-night-700 dark:text-mist-200'
                 }`}
               >
                 <Icon size={22} />
@@ -155,15 +169,19 @@ export default function ReportModal({
                 type="button"
                 onClick={() => setSeverity(n)}
                 aria-label={`Gravité ${n}`}
-                className={`h-2 w-8 rounded-full ${n <= severity ? 'bg-traffic-3' : 'bg-sand-200'}`}
+                className={`h-2 w-8 rounded-full ${
+                  n <= severity ? 'bg-traffic-3 dark:bg-traffic-3-dark' : 'bg-sand-200 dark:bg-night-600'
+                }`}
               />
             ))}
           </div>
-          <span className="text-sm font-semibold text-ink-700">
+          <span className="text-sm font-semibold text-ink-700 dark:text-mist-200">
             {severity} · {NIVEAU_LABELS[severity]}
           </span>
         </div>
-        <p className="mt-1 text-xs text-ink-400">Pré-remplie selon le type, ajustable.</p>
+        <p className="mt-1 text-xs text-ink-400 dark:text-mist-400">
+          Pré-remplie selon le type, ajustable.
+        </p>
 
         <div className="mt-4">
           <textarea
@@ -171,25 +189,27 @@ export default function ReportModal({
             onChange={(e) => setComment(e.target.value.slice(0, COMMENT_MAX))}
             placeholder="Commentaire (facultatif)"
             rows={2}
-            className="w-full resize-none rounded-field bg-sand-100 p-3 text-[15px] text-ink-900 outline-none placeholder:text-ink-400"
+            className="w-full resize-none rounded-field bg-sand-100 p-3 text-[15px] text-ink-900 outline-none placeholder:text-ink-400 dark:bg-night-700 dark:text-mist-50 dark:placeholder:text-mist-500"
           />
-          <p className="mt-1 text-right text-xs text-ink-400">
+          <p className="mt-1 text-right text-xs text-ink-400 dark:text-mist-400">
             {comment.length} / {COMMENT_MAX}
           </p>
         </div>
 
-        <div className="mt-2 flex items-center justify-between rounded-field bg-brand-50 px-4 py-3">
-          <span className="text-sm text-ink-700">{positionLabel}</span>
+        <div className="mt-2 flex items-center justify-between rounded-field bg-brand-50 px-4 py-3 dark:bg-night-700 dark:ring-1 dark:ring-brand-300/40">
+          <span className="text-sm text-ink-700 dark:text-mist-200">{positionLabel}</span>
         </div>
-        <p className="mt-1 text-xs text-ink-400">Glissez le marqueur sur la carte pour ajuster la position.</p>
+        <p className="mt-1 text-xs text-ink-400 dark:text-mist-400">
+          Glissez le marqueur sur la carte pour ajuster la position.
+        </p>
 
-        {errorMessage && <p className="mt-3 text-sm text-[#7A1F17]">{errorMessage}</p>}
+        {errorMessage && <p className="mt-3 text-sm text-[#7A1F17] dark:text-[#F2564A]">{errorMessage}</p>}
 
         <button
           type="button"
           disabled={!canSubmit}
           onClick={handleSubmit}
-          className="mt-4 h-[58px] w-full rounded-btn bg-accent-500 font-bold text-accent-950 disabled:bg-sand-200 disabled:text-ink-300"
+          className="mt-4 h-[58px] w-full rounded-btn bg-accent-500 font-bold text-accent-950 disabled:bg-sand-200 disabled:text-ink-300 dark:disabled:bg-night-700 dark:disabled:text-mist-500"
         >
           {remaining > 0
             ? `Publier le signalement (${remaining}s)`

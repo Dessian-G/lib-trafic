@@ -3,16 +3,20 @@ import { Ban, CarFront, HardHat, ShieldAlert, TriangleAlert, Waves } from 'lucid
 import { useEffect, useRef, type ComponentType, type MutableRefObject } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { CARTE_CENTRE, CARTE_ZOOM_DEFAUT } from '../data/libreville'
+import { useColorScheme, usePrefersReducedMotion } from '../hooks/useColorScheme'
 import type { GeoPosition } from '../hooks/useGeolocation'
-import { NIVEAU_COULEURS } from '../lib/traffic'
+import { NIVEAU_COULEURS, NIVEAU_COULEURS_SOMBRE } from '../lib/traffic'
 import type { Axe, ReportType, Severity, TrafficReport } from '../types'
 
-const USER_ICON = L.divIcon({
-  className: '',
-  html: '<span style="display:block;width:22px;height:22px;border-radius:9999px;background:#1462A8;box-shadow:0 0 0 6px rgba(20,98,168,.22)"></span>',
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-})
+function createUserIcon(scheme: 'light' | 'dark'): L.DivIcon {
+  const color = scheme === 'dark' ? '#4FA3E8' : '#1462A8'
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:block;width:22px;height:22px;border-radius:9999px;background:${color};box-shadow:0 0 0 6px rgba(20,98,168,.22)"></span>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  })
+}
 
 const DRAFT_ICON = L.divIcon({
   className: '',
@@ -33,13 +37,14 @@ const TYPE_ICONS: Record<ReportType, ComponentType<{ size?: number; color?: stri
 
 const PROCHE_EXPIRATION_MS = 10 * 60 * 1000
 
-function createReportIcon(report: TrafficReport): L.DivIcon {
+function createReportIcon(report: TrafficReport, scheme: 'light' | 'dark'): L.DivIcon {
   const Icon = TYPE_ICONS[report.type]
   const svg = renderToStaticMarkup(<Icon size={18} color="#fff" />)
   const opacity = report.expiresAt.toMillis() - Date.now() <= PROCHE_EXPIRATION_MS ? 0.6 : 1
+  const couleurs = scheme === 'dark' ? NIVEAU_COULEURS_SOMBRE : NIVEAU_COULEURS
   return L.divIcon({
     className: '',
-    html: `<div style="width:38px;height:38px;border-radius:12px 12px 12px 4px;background:${NIVEAU_COULEURS[report.severity]};display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.25);opacity:${opacity}">${svg}</div>`,
+    html: `<div style="width:38px;height:38px;border-radius:12px 12px 12px 4px;background:${couleurs[report.severity]};display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.25);opacity:${opacity}">${svg}</div>`,
     iconSize: [38, 38],
     iconAnchor: [8, 36],
   })
@@ -92,6 +97,13 @@ export default function MapView({
   onSelectReportRef.current = onSelectReport
   onDraftPositionChangeRef.current = onDraftPositionChange
 
+  const scheme = useColorScheme()
+  const reducedMotion = usePrefersReducedMotion()
+  const schemeRef = useRef(scheme)
+  const reducedMotionRef = useRef(reducedMotion)
+  schemeRef.current = scheme
+  reducedMotionRef.current = reducedMotion
+
   useEffect(() => {
     if (!containerRef.current || leafletMapRef.current) return
 
@@ -108,7 +120,12 @@ export default function MapView({
     leafletMapRef.current = map
     mapRef.current = {
       flyTo: (position, zoom) => {
-        map.flyTo([position.lat, position.lng], zoom ?? Math.max(map.getZoom(), 14))
+        const targetZoom = zoom ?? Math.max(map.getZoom(), 14)
+        if (reducedMotionRef.current) {
+          map.setView([position.lat, position.lng], targetZoom)
+        } else {
+          map.flyTo([position.lat, position.lng], targetZoom)
+        }
       },
     }
 
@@ -126,19 +143,25 @@ export default function MapView({
 
     if (!userMarkerRef.current) {
       userMarkerRef.current = L.marker([userPosition.lat, userPosition.lng], {
-        icon: USER_ICON,
+        icon: createUserIcon(scheme),
         zIndexOffset: 1000,
       }).addTo(map)
     } else {
       userMarkerRef.current.setLatLng([userPosition.lat, userPosition.lng])
+      userMarkerRef.current.setIcon(createUserIcon(scheme))
     }
-  }, [userPosition])
+  }, [userPosition, scheme])
 
   useEffect(() => {
     if (recenterSignal === 0) return
     const map = leafletMapRef.current
     if (map && userPosition) {
-      map.flyTo([userPosition.lat, userPosition.lng], Math.max(map.getZoom(), 14))
+      const targetZoom = Math.max(map.getZoom(), 14)
+      if (reducedMotion) {
+        map.setView([userPosition.lat, userPosition.lng], targetZoom)
+      } else {
+        map.flyTo([userPosition.lat, userPosition.lng], targetZoom)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recenterSignal])
@@ -155,9 +178,9 @@ export default function MapView({
       const existant = current.get(report.id)
       if (existant) {
         existant.setLatLng([report.lat, report.lng])
-        existant.setIcon(createReportIcon(report))
+        existant.setIcon(createReportIcon(report, scheme))
       } else {
-        const marker = L.marker([report.lat, report.lng], { icon: createReportIcon(report) })
+        const marker = L.marker([report.lat, report.lng], { icon: createReportIcon(report, scheme) })
         marker.on('click', () => onSelectReportRef.current(report))
         marker.addTo(map)
         current.set(report.id, marker)
@@ -170,7 +193,7 @@ export default function MapView({
         current.delete(id)
       }
     }
-  }, [reports])
+  }, [reports, scheme])
 
   // Axes colores selon le niveau de trafic agrege (CLAUDE.md §6).
   useEffect(() => {
@@ -181,6 +204,7 @@ export default function MapView({
     const weight = niveauLargeur(map.getZoom())
     // DESIGN.md §5.7 : axes a 55% d'opacite hors ligne (donnees potentiellement perimees).
     const opacity = offline ? 0.55 : 0.9
+    const couleurs = scheme === 'dark' ? NIVEAU_COULEURS_SOMBRE : NIVEAU_COULEURS
 
     for (const { axe, niveau } of axesAvecNiveau) {
       const points = axe.path.filter(
@@ -192,10 +216,10 @@ export default function MapView({
       const existant = current.get(axe.id)
       if (existant) {
         existant.setLatLngs(latlngs)
-        existant.setStyle({ color: NIVEAU_COULEURS[niveau], weight, opacity })
+        existant.setStyle({ color: couleurs[niveau], weight, opacity })
       } else {
         const polyline = L.polyline(latlngs, {
-          color: NIVEAU_COULEURS[niveau],
+          color: couleurs[niveau],
           weight,
           opacity,
           lineCap: 'round',
@@ -210,7 +234,7 @@ export default function MapView({
         current.delete(id)
       }
     }
-  }, [axesAvecNiveau, offline])
+  }, [axesAvecNiveau, offline, scheme])
 
   useEffect(() => {
     const map = leafletMapRef.current

@@ -17,14 +17,18 @@ interface BottomNavProps {
 export default function BottomNav({ active, onChange, offline }: BottomNavProps) {
   return (
     <nav
-      className="flex shrink-0 items-stretch border-t border-sand-200 bg-sand-50 pb-[env(safe-area-inset-bottom)]"
+      className="flex shrink-0 items-stretch border-t border-sand-200 bg-sand-50 pb-[env(safe-area-inset-bottom)] dark:border-night-600 dark:bg-night-900"
       style={{ height: 'calc(94px + env(safe-area-inset-bottom))' }}
     >
       {TABS.map(({ id, label, icon: Icon }) => {
         const isActive = id === active
         // L'itineraire exige le reseau (ORS) : desactive hors ligne (DESIGN.md §5.7).
         const isDisabled = offline && id === 'itineraire'
-        const color = isDisabled ? 'text-ink-300' : isActive ? 'text-brand-600' : 'text-ink-400'
+        const color = isDisabled
+          ? 'text-ink-300 dark:text-mist-500'
+          : isActive
+            ? 'text-brand-600 dark:text-brand-300'
+            : 'text-ink-400 dark:text-mist-400'
         return (
           <button
             key={id}

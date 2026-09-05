@@ -1,14 +1,18 @@
 import L from 'leaflet'
 import { useEffect, useRef } from 'react'
 import { CARTE_CENTRE, CARTE_ZOOM_DEFAUT } from '../data/libreville'
+import { useColorScheme, usePrefersReducedMotion } from '../hooks/useColorScheme'
 import type { LatLng, OrsRoute } from '../lib/ors'
 
-const DEPART_ICON = L.divIcon({
-  className: '',
-  html: '<span style="display:block;width:18px;height:18px;border-radius:9999px;background:#1462A8;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>',
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-})
+function createDepartIcon(scheme: 'light' | 'dark'): L.DivIcon {
+  const color = scheme === 'dark' ? '#4FA3E8' : '#1462A8'
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:block;width:18px;height:18px;border-radius:9999px;background:${color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  })
+}
 
 const ARRIVEE_ICON = L.divIcon({
   className: '',
@@ -31,6 +35,8 @@ export default function RouteMapView({ depart, arrivee, recommande, alternative 
   const arriveeMarkerRef = useRef<L.Marker | null>(null)
   const recommandeLineRef = useRef<L.Polyline | null>(null)
   const alternativeLineRef = useRef<L.Polyline | null>(null)
+  const scheme = useColorScheme()
+  const reducedMotion = usePrefersReducedMotion()
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -55,10 +61,12 @@ export default function RouteMapView({ depart, arrivee, recommande, alternative 
     if (!map) return
 
     if (depart) {
+      const icon = createDepartIcon(scheme)
       if (!departMarkerRef.current) {
-        departMarkerRef.current = L.marker([depart.lat, depart.lng], { icon: DEPART_ICON }).addTo(map)
+        departMarkerRef.current = L.marker([depart.lat, depart.lng], { icon }).addTo(map)
       } else {
         departMarkerRef.current.setLatLng([depart.lat, depart.lng])
+        departMarkerRef.current.setIcon(icon)
       }
     } else {
       departMarkerRef.current?.remove()
@@ -88,7 +96,7 @@ export default function RouteMapView({ depart, arrivee, recommande, alternative 
     recommandeLineRef.current = recommande
       ? L.polyline(
           recommande.geometry.map(([lng, lat]): [number, number] => [lat, lng]),
-          { color: '#1462A8', weight: 11, lineCap: 'round' },
+          { color: scheme === 'dark' ? '#4FA3E8' : '#1462A8', weight: 11, lineCap: 'round' },
         ).addTo(map)
       : null
 
@@ -97,11 +105,15 @@ export default function RouteMapView({ depart, arrivee, recommande, alternative 
     if (arrivee) bounds.push([arrivee.lat, arrivee.lng])
     if (recommande) bounds.push(...recommande.geometry.map(([lng, lat]): [number, number] => [lat, lng]))
     if (bounds.length >= 2) {
-      map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40] })
+      map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], animate: !reducedMotion })
     } else if (bounds.length === 1) {
-      map.setView(bounds[0] as L.LatLngTuple, 14)
+      if (reducedMotion) {
+        map.setView(bounds[0] as L.LatLngTuple, 14)
+      } else {
+        map.flyTo(bounds[0] as L.LatLngTuple, 14)
+      }
     }
-  }, [depart, arrivee, recommande, alternative])
+  }, [depart, arrivee, recommande, alternative, scheme, reducedMotion])
 
   return <div ref={containerRef} className="absolute inset-0 isolate" />
 }

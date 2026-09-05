@@ -78,7 +78,7 @@ export default function InstallPrompt() {
           type="button"
           onClick={handlePlusTard}
           aria-label="Fermer"
-          className="shrink-0 text-[#DCEAE0]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center text-[#DCEAE0]"
         >
           <X size={18} />
         </button>

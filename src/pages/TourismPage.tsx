@@ -1,6 +1,7 @@
 import { Heart } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { LocationValue } from '../components/RoutePlanner'
+import Skeleton from '../components/Skeleton'
 import TouristSheet from '../components/TouristSheet'
 import { useFavorites } from '../hooks/useFavorites'
 import type { GeoPosition } from '../hooks/useGeolocation'
@@ -27,6 +28,7 @@ function formatDistance(metres: number): string {
 
 interface TourismPageProps {
   sites: TouristSite[]
+  sitesLoaded: boolean
   reperes: Repere[]
   userPosition: GeoPosition | null
   onNavigateToSite: (arrivee: LocationValue) => void
@@ -34,6 +36,7 @@ interface TourismPageProps {
 
 export default function TourismPage({
   sites,
+  sitesLoaded,
   reperes,
   userPosition,
   onNavigateToSite,
@@ -66,10 +69,10 @@ export default function TourismPage({
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden bg-sand-50 dark:bg-night-900">
       <div className="px-[22px] pt-6">
-        <h1 className="font-display text-2xl font-bold">Sites à découvrir</h1>
-        <p className="mt-1 text-sm text-ink-500">
+        <h1 className="font-display text-2xl font-bold dark:text-mist-50">Sites à découvrir</h1>
+        <p className="mt-1 text-sm text-ink-500 dark:text-mist-200">
           {userPosition && quartierProche
             ? `◎ Triés par distance depuis ${quartierProche}`
             : 'Triés par ordre alphabétique'}
@@ -86,7 +89,9 @@ export default function TourismPage({
               type="button"
               onClick={() => setFiltre(c)}
               className={`h-8 shrink-0 rounded-full px-3 text-[13px] font-semibold ${
-                isActive ? 'bg-brand-600 text-white' : 'bg-sand-100 text-ink-600'
+                isActive
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-sand-100 text-ink-600 dark:bg-night-700 dark:text-mist-200'
               }`}
             >
               {label}
@@ -96,77 +101,107 @@ export default function TourismPage({
       </div>
 
       <div className="mt-3 flex-1 overflow-y-auto px-[22px] pb-6">
-        {sitesTries.map((site, index) => {
-          const distanceLabel = distanceDe(site)
-          const positionConnue = site.lat !== null && site.lng !== null
+        {!sitesLoaded && (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-[220px] w-full" />
+            <Skeleton className="h-[104px] w-full" />
+            <Skeleton className="h-[104px] w-full" />
+          </div>
+        )}
 
-          if (index === 0) {
-            return (
-              <div key={site.id} className="mb-3 shrink-0 overflow-hidden rounded-card bg-sand-100">
-                <button type="button" onClick={() => setSelectedId(site.id)} className="block w-full text-left">
-                  <div
-                    className="flex h-[112px] items-end p-3"
-                    style={{ backgroundColor: CATEGORY_COLORS[site.category] }}
-                  >
-                    <span className="rounded-full bg-[rgba(22,33,28,.7)] px-2 py-1 text-[11px] font-bold uppercase tracking-[.08em] text-white">
-                      {CATEGORY_LABELS[site.category]}
-                    </span>
-                  </div>
-                  <div className="p-3">
-                    <p className="font-display text-lg font-bold">{site.name}</p>
-                    {distanceLabel && (
-                      <p className="text-[13px] font-bold text-brand-600">{distanceLabel}</p>
-                    )}
-                    <p className="mt-1 text-[13px] text-ink-600">{site.description}</p>
-                  </div>
-                </button>
-                <div className="flex gap-2 px-3 pb-3">
+        {sitesLoaded &&
+          sitesTries.map((site, index) => {
+            const distanceLabel = distanceDe(site)
+            const positionConnue = site.lat !== null && site.lng !== null
+
+            if (index === 0) {
+              return (
+                <div
+                  key={site.id}
+                  className="mb-3 shrink-0 overflow-hidden rounded-card bg-sand-100 dark:bg-night-700"
+                >
                   <button
                     type="button"
-                    disabled={!positionConnue}
-                    onClick={() => handleNaviguer(site)}
-                    className="flex h-11 flex-1 items-center justify-center gap-1 rounded-btn bg-brand-600 text-sm font-semibold text-white disabled:bg-sand-200 disabled:text-ink-300"
+                    onClick={() => setSelectedId(site.id)}
+                    className="block w-full text-left"
                   >
-                    ➟ M'y rendre
+                    <div
+                      className="flex h-[112px] items-end p-3"
+                      style={{ backgroundColor: CATEGORY_COLORS[site.category] }}
+                    >
+                      <span className="rounded-full bg-[rgba(22,33,28,.7)] px-2 py-1 text-[11px] font-bold uppercase tracking-[.08em] text-white">
+                        {CATEGORY_LABELS[site.category]}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <p className="font-display text-lg font-bold dark:text-mist-50">{site.name}</p>
+                      {distanceLabel && (
+                        <p className="text-[13px] font-bold text-brand-600 dark:text-brand-300">
+                          {distanceLabel}
+                        </p>
+                      )}
+                      <p className="mt-1 text-[13px] text-ink-600 dark:text-mist-200">
+                        {site.description}
+                      </p>
+                    </div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleFavori(site.id)}
-                    aria-label="Favori"
-                    className="flex h-11 w-11 items-center justify-center rounded-btn bg-sand-100"
-                  >
-                    <Heart
-                      size={18}
-                      className={estFavori(site.id) ? 'fill-accent-500 text-accent-500' : 'text-ink-400'}
-                    />
-                  </button>
+                  <div className="flex gap-2 px-3 pb-3">
+                    <button
+                      type="button"
+                      disabled={!positionConnue}
+                      onClick={() => handleNaviguer(site)}
+                      className="flex h-11 flex-1 items-center justify-center gap-1 rounded-btn bg-brand-600 text-sm font-semibold text-white disabled:bg-sand-200 disabled:text-ink-300 dark:disabled:bg-night-600 dark:disabled:text-mist-500"
+                    >
+                      ➟ M'y rendre
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleFavori(site.id)}
+                      aria-label="Favori"
+                      className="flex h-11 w-11 items-center justify-center rounded-btn bg-sand-100 dark:bg-night-600"
+                    >
+                      <Heart
+                        size={18}
+                        className={
+                          estFavori(site.id) ? 'fill-accent-500 text-accent-500' : 'text-ink-400 dark:text-mist-400'
+                        }
+                      />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          }
+              )
+            }
 
-          return (
-            <button
-              key={site.id}
-              type="button"
-              onClick={() => setSelectedId(site.id)}
-              className="mb-2 flex w-full shrink-0 gap-3 rounded-card bg-sand-100 p-2 text-left"
-            >
-              <div
-                className="h-[104px] w-[104px] shrink-0 rounded-field"
-                style={{ backgroundColor: CATEGORY_COLORS[site.category] }}
-              />
-              <div className="flex min-w-0 flex-1 flex-col justify-center">
-                <p className="truncate text-base font-bold text-ink-900">{site.name}</p>
-                {distanceLabel && <p className="text-xs font-bold text-brand-600">{distanceLabel}</p>}
-                <p className="mt-0.5 line-clamp-2 text-xs text-ink-500">{site.description}</p>
-                <span className="mt-1 inline-block w-fit rounded-full bg-sand-200 px-2 py-0.5 text-[11px] font-semibold text-ink-600">
-                  {CATEGORY_LABELS[site.category]}
-                </span>
-              </div>
-            </button>
-          )
-        })}
+            return (
+              <button
+                key={site.id}
+                type="button"
+                onClick={() => setSelectedId(site.id)}
+                className="mb-2 flex w-full shrink-0 gap-3 rounded-card bg-sand-100 p-2 text-left dark:bg-night-700"
+              >
+                <div
+                  className="h-[104px] w-[104px] shrink-0 rounded-field"
+                  style={{ backgroundColor: CATEGORY_COLORS[site.category] }}
+                />
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                  <p className="truncate text-base font-bold text-ink-900 dark:text-mist-50">
+                    {site.name}
+                  </p>
+                  {distanceLabel && (
+                    <p className="text-xs font-bold text-brand-600 dark:text-brand-300">
+                      {distanceLabel}
+                    </p>
+                  )}
+                  <p className="mt-0.5 line-clamp-2 text-xs text-ink-500 dark:text-mist-200">
+                    {site.description}
+                  </p>
+                  <span className="mt-1 inline-block w-fit rounded-full bg-sand-200 px-2 py-0.5 text-[11px] font-semibold text-ink-600 dark:bg-night-600 dark:text-mist-200">
+                    {CATEGORY_LABELS[site.category]}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
       </div>
 
       {selectedSite && (

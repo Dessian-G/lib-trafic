@@ -48,6 +48,16 @@ export const NIVEAU_COULEURS: Record<Severity, string> = {
   4: '#DC3B2F',
 }
 
+// DESIGN.md §2 : variante sombre des couleurs de trafic. Utilisee pour les
+// elements rendus par Leaflet (marqueurs/polylines en style inline), qui ne
+// peuvent pas profiter des variantes `dark:` de Tailwind.
+export const NIVEAU_COULEURS_SOMBRE: Record<Severity, string> = {
+  1: '#46C46A',
+  2: '#FFD34F',
+  3: '#FF9440',
+  4: '#F2564A',
+}
+
 const RAYON_AXE_METRES = 300
 const SEUIL_PROCHE_EXPIRATION_MIN = 10
 

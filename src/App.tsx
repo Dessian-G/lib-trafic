@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import BottomNav, { type TabId } from './components/BottomNav'
 import InstallPrompt from './components/InstallPrompt'
 import OfflineBanner from './components/OfflineBanner'
@@ -8,10 +8,14 @@ import { useGeolocation } from './hooks/useGeolocation'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { useTrafficReports } from './hooks/useTrafficReports'
 import { niveauAxe } from './lib/traffic'
-import MapPage from './pages/MapPage'
-import RoutePage from './pages/RoutePage'
-import TourismPage from './pages/TourismPage'
 import type { Axe, Repere, TouristSite } from './types'
+
+// Chargement paresseux par onglet : Leaflet (Carte/Itineraire) et Firebase
+// ne sont telecharges qu'une fois l'onboarding passe, et chaque page n'est
+// chargee qu'a la premiere visite de son onglet (frugalite reseau, §1).
+const MapPage = lazy(() => import('./pages/MapPage'))
+const RoutePage = lazy(() => import('./pages/RoutePage'))
+const TourismPage = lazy(() => import('./pages/TourismPage'))
 
 const ONBOARDING_KEY = 'libtrafic_onboarding_done'
 
@@ -27,7 +31,8 @@ function App() {
   const [reperes, setReperes] = useState<Repere[]>([])
   const [axes, setAxes] = useState<Axe[]>([])
   const [sites, setSites] = useState<TouristSite[]>([])
-  const reports = useTrafficReports()
+  const [sitesLoaded, setSitesLoaded] = useState(false)
+  const { reports, error: reportsError, retry: retryReports } = useTrafficReports()
 
   useEffect(() => {
     fetch('/data/quartiers.json').then((r) => r.json()).then(setReperes).catch(() => setReperes([]))
@@ -36,6 +41,7 @@ function App() {
       .then((r) => r.json())
       .then(setSites)
       .catch(() => setSites([]))
+      .finally(() => setSitesLoaded(true))
   }, [])
 
   const axesAvecNiveau = useMemo(
@@ -68,40 +74,45 @@ function App() {
   }
 
   return (
-    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-sand-50">
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-sand-50 dark:bg-night-900">
       <OfflineBanner offlineSince={offlineSince} />
       <div className="relative flex-1 overflow-hidden">
-        {tab === 'carte' && (
-          <MapPage
-            userPosition={position}
-            onRequestPosition={requestPosition}
-            onNavigateToRoute={() => setTab('itineraire')}
-            reperes={reperes}
-            reports={reports}
-            axesAvecNiveau={axesAvecNiveau}
-            offline={!online}
-          />
-        )}
-        {tab === 'itineraire' && (
-          <RoutePage
-            userPosition={position}
-            reperes={reperes}
-            sites={sites}
-            axesAvecNiveau={axesAvecNiveau}
-            presetArrivee={presetArrivee}
-          />
-        )}
-        {tab === 'sites' && (
-          <TourismPage
-            sites={sites}
-            reperes={reperes}
-            userPosition={position}
-            onNavigateToSite={(arrivee) => {
-              setPresetArrivee(arrivee)
-              setTab('itineraire')
-            }}
-          />
-        )}
+        <Suspense fallback={<div className="h-full w-full bg-sand-50 dark:bg-night-900" />}>
+          {tab === 'carte' && (
+            <MapPage
+              userPosition={position}
+              onRequestPosition={requestPosition}
+              onNavigateToRoute={() => setTab('itineraire')}
+              reperes={reperes}
+              reports={reports}
+              reportsError={reportsError}
+              onRetryReports={retryReports}
+              axesAvecNiveau={axesAvecNiveau}
+              offline={!online}
+            />
+          )}
+          {tab === 'itineraire' && (
+            <RoutePage
+              userPosition={position}
+              reperes={reperes}
+              sites={sites}
+              axesAvecNiveau={axesAvecNiveau}
+              presetArrivee={presetArrivee}
+            />
+          )}
+          {tab === 'sites' && (
+            <TourismPage
+              sites={sites}
+              sitesLoaded={sitesLoaded}
+              reperes={reperes}
+              userPosition={position}
+              onNavigateToSite={(arrivee) => {
+                setPresetArrivee(arrivee)
+                setTab('itineraire')
+              }}
+            />
+          )}
+        </Suspense>
       </div>
       <BottomNav active={tab} onChange={setTab} offline={!online} />
       <InstallPrompt />
