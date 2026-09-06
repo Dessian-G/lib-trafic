@@ -1,5 +1,6 @@
-import { Heart } from 'lucide-react'
+import { Heart, MapPinned } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import CommunesSheet from '../components/CommunesSheet'
 import type { LocationValue } from '../components/RoutePlanner'
 import Skeleton from '../components/Skeleton'
 import TouristSheet from '../components/TouristSheet'
@@ -43,6 +44,7 @@ export default function TourismPage({
 }: TourismPageProps) {
   const [filtre, setFiltre] = useState<FiltreCategorie>('tous')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [communesOuvert, setCommunesOuvert] = useState(false)
   const { estFavori, toggleFavori } = useFavorites()
 
   const quartiers = useMemo(() => reperes.filter((r) => r.type === 'quartier'), [reperes])
@@ -70,13 +72,23 @@ export default function TourismPage({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-sand-50 dark:bg-night-900">
-      <div className="px-[22px] pt-6">
-        <h1 className="font-display text-2xl font-bold dark:text-mist-50">Sites à découvrir</h1>
-        <p className="mt-1 text-sm text-ink-500 dark:text-mist-200">
-          {userPosition && quartierProche
-            ? `◎ Triés par distance depuis ${quartierProche}`
-            : 'Triés par ordre alphabétique'}
-        </p>
+      <div className="flex items-start justify-between gap-3 px-[22px] pt-6">
+        <div>
+          <h1 className="font-display text-2xl font-bold dark:text-mist-50">Sites à découvrir</h1>
+          <p className="mt-1 text-sm text-ink-500 dark:text-mist-200">
+            {userPosition && quartierProche
+              ? `◎ Triés par distance depuis ${quartierProche}`
+              : 'Triés par ordre alphabétique'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCommunesOuvert(true)}
+          className="mt-1 flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-300"
+        >
+          <MapPinned size={14} />
+          Communes
+        </button>
       </div>
 
       <div className="mt-3 flex gap-2 overflow-x-auto px-[22px]">
@@ -217,6 +229,8 @@ export default function TourismPage({
           }}
         />
       )}
+
+      {communesOuvert && <CommunesSheet onClose={() => setCommunesOuvert(false)} />}
     </div>
   )
 }

@@ -92,3 +92,16 @@ export interface BusLine {
   stops: string[]
   note?: string
 }
+
+// Seule Libreville dispose d'une frontiere administrative cartographiee dans
+// OpenStreetMap (relation admin_level 6) ; Owendo/Akanda/Ntoum n'y ont pas de
+// polygone de commune — `boundary` reste alors `null` plutot que d'inventer
+// un trace, et seul le centre (point verifie) est disponible.
+export interface CommuneZone {
+  id: string
+  name: string
+  color: string
+  boundary: { lat: number; lng: number }[] | null
+  center: { lat: number; lng: number }
+  source: string
+}
