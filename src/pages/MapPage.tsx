@@ -1,5 +1,5 @@
 import { Locate, Search, SlidersHorizontal } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import MapView, { type MapViewHandle } from '../components/MapView'
 import ReportButton from '../components/ReportButton'
 import ReportModal from '../components/ReportModal'
@@ -23,6 +23,11 @@ const FILTRES: { id: Filtre; label: string }[] = [
 
 const SEUIL_CARREFOUR_M = 400
 const SEUIL_AXE_M = 500
+
+// Hauteur du chrome fixe en haut de cette page (pt-[52px] + barre de
+// recherche 52px + gap 12px + chips 32px) : a garder en phase avec le JSX
+// ci-dessous si cette zone change de taille.
+const HAUTEUR_CHROME_HAUT_PX = 52 + 52 + 12 + 32
 
 interface MapPageProps {
   userPosition: GeoPosition | null
@@ -54,6 +59,9 @@ export default function MapPage({
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [draftPosition, setDraftPosition] = useState<GeoPosition | null>(null)
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+  const [reportSheetHeight, setReportSheetHeight] = useState(0)
+  const [reportOpenSignal, setReportOpenSignal] = useState(0)
+  const handleSheetHeightChange = useCallback((h: number) => setReportSheetHeight(h), [])
 
   const uid = useAuthUid()
   const axes = useMemo(() => axesAvecNiveau.map((a) => a.axe), [axesAvecNiveau])
@@ -86,6 +94,7 @@ export default function MapPage({
   const handleOpenReport = () => {
     setDraftPosition(userPosition ?? CARTE_CENTRE)
     setReportModalOpen(true)
+    setReportOpenSignal((n) => n + 1)
   }
 
   const quartiers = useMemo(() => reperes.filter((r) => r.type === 'quartier'), [reperes])
@@ -122,6 +131,9 @@ export default function MapPage({
         axesAvecNiveau={axesAvecNiveau}
         draftPosition={reportModalOpen ? draftPosition : null}
         onDraftPositionChange={setDraftPosition}
+        reportOpenSignal={reportOpenSignal}
+        draftAvoidBottomPx={reportModalOpen ? reportSheetHeight : 0}
+        draftAvoidTopPx={reportModalOpen ? HAUTEUR_CHROME_HAUT_PX : 0}
         offline={offline}
       />
 
@@ -227,6 +239,7 @@ export default function MapPage({
         positionLabel={positionLabel}
         quartierNom={quartierNom}
         axeNom={axeNom}
+        onSheetHeightChange={handleSheetHeightChange}
       />
 
       {selectedReport && (

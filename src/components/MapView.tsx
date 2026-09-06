@@ -72,6 +72,16 @@ interface MapViewProps {
   axesAvecNiveau: AxeAvecNiveau[]
   draftPosition: GeoPosition | null
   onDraftPositionChange: (position: GeoPosition) => void
+  // Incremente a chaque ouverture du flux de signalement ; declenche le
+  // recadrage qui rend le marqueur visible au-dessus de la feuille (sinon il
+  // reste cache dessous, cf. bug "marqueur invisible").
+  reportOpenSignal?: number
+  // Hauteur reelle (mesuree, pas devinee) de la feuille de signalement a
+  // eviter au bas de l'ecran quand on recadre sur le marqueur.
+  draftAvoidBottomPx?: number
+  // Hauteur du bandeau recherche+chips en haut (chrome fixe de MapPage) a
+  // eviter aussi, pour ne pas placer le marqueur juste dessous.
+  draftAvoidTopPx?: number
   offline?: boolean
 }
 
@@ -84,6 +94,9 @@ export default function MapView({
   axesAvecNiveau,
   draftPosition,
   onDraftPositionChange,
+  reportOpenSignal = 0,
+  draftAvoidBottomPx = 0,
+  draftAvoidTopPx = 0,
   offline,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -236,6 +249,8 @@ export default function MapView({
     }
   }, [axesAvecNiveau, offline, scheme])
 
+  const hasUserDraggedRef = useRef(false)
+
   useEffect(() => {
     const map = leafletMapRef.current
     if (!map) return
@@ -253,6 +268,7 @@ export default function MapView({
         zIndexOffset: 2000,
       })
       marker.on('dragend', () => {
+        hasUserDraggedRef.current = true
         const { lat, lng } = marker.getLatLng()
         onDraftPositionChangeRef.current({ lat, lng })
       })
@@ -262,6 +278,30 @@ export default function MapView({
       draftMarkerRef.current.setLatLng([draftPosition.lat, draftPosition.lng])
     }
   }, [draftPosition])
+
+  // Recadre la carte pour que le marqueur de signalement reste visible dans
+  // la bande au-dessus de la feuille (sinon il est cache dessous). Ne se
+  // declenche qu'a l'ouverture (reportOpenSignal) et quand la hauteur reelle
+  // de la feuille arrive (mesuree via ResizeObserver, pas un chiffre invente)
+  // — jamais pendant que l'utilisateur fait glisser le marqueur lui-meme.
+  useEffect(() => {
+    if (reportOpenSignal === 0) return
+    hasUserDraggedRef.current = false
+  }, [reportOpenSignal])
+
+  useEffect(() => {
+    const map = leafletMapRef.current
+    if (!map || !draftPosition || hasUserDraggedRef.current) return
+    const targetZoom = Math.max(map.getZoom(), 15)
+    map.setView([draftPosition.lat, draftPosition.lng], targetZoom, { animate: false })
+    if (draftAvoidBottomPx > 0) {
+      // Centre le marqueur dans la bande restant visible entre le chrome du
+      // haut (recherche+chips) et la feuille en bas, plutot que dans tout
+      // l'ecran (qui le placerait sous le chrome du haut).
+      map.panBy([0, (draftAvoidBottomPx - draftAvoidTopPx) / 2], { animate: false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportOpenSignal, draftAvoidBottomPx, draftAvoidTopPx])
 
   // isolate : Leaflet pose ses panes internes a des z-index allant jusqu'a
   // 700 ; sans nouveau contexte d'empilement ici, ils passeraient au-dessus

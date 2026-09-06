@@ -1,6 +1,6 @@
 import { addDoc, collection, Timestamp } from 'firebase/firestore'
-import { Ban, CarFront, HardHat, ShieldAlert, TriangleAlert, Waves } from 'lucide-react'
-import { useEffect, useState, type ComponentType } from 'react'
+import { Ban, CarFront, HardHat, ShieldAlert, TriangleAlert, Waves, X } from 'lucide-react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { auth, db } from '../firebase'
 import { useAuthUid } from '../hooks/useAuthUid'
 import type { GeoPosition } from '../hooks/useGeolocation'
@@ -30,6 +30,10 @@ interface ReportModalProps {
   positionLabel: string
   quartierNom?: string
   axeNom?: string
+  // Hauteur reelle de la feuille, mesuree plutot que devinee : sert au parent
+  // a recadrer la carte pour que le marqueur reste visible au-dessus (§ bug
+  // "marqueur invisible, cache sous la feuille").
+  onSheetHeightChange?: (heightPx: number) => void
 }
 
 export default function ReportModal({
@@ -39,6 +43,7 @@ export default function ReportModal({
   positionLabel,
   quartierNom,
   axeNom,
+  onSheetHeightChange,
 }: ReportModalProps) {
   const uid = useAuthUid()
   const { online } = useOnlineStatus()
@@ -49,6 +54,7 @@ export default function ReportModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [remaining, setRemaining] = useState(0)
   const [entered, setEntered] = useState(false)
+  const sheetRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -70,6 +76,20 @@ export default function ReportModal({
     const raf = requestAnimationFrame(() => setEntered(true))
     return () => cancelAnimationFrame(raf)
   }, [open])
+
+  useEffect(() => {
+    if (!open || !onSheetHeightChange) return
+    const el = sheetRef.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) onSheetHeightChange(entry.contentRect.height)
+    })
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      onSheetHeightChange(0)
+    }
+  }, [open, onSheetHeightChange])
 
   if (!open) return null
 
@@ -128,17 +148,33 @@ export default function ReportModal({
   }
 
   return (
-    <div className="absolute inset-0 z-20 flex items-end bg-[rgba(16,21,18,.45)]" onClick={onClose}>
+    <div className="absolute inset-0 z-20 flex items-end">
+      {/* Teinte visuelle seule (pointer-events-none) : le pic de carte
+          au-dessus de la feuille doit rester interactif pour glisser le
+          marqueur, donc pas de "cliquer dehors pour fermer" ici — fermeture
+          explicite via le bouton ci-dessous. */}
+      <div className="absolute inset-0 bg-[rgba(16,21,18,.45)] pointer-events-none" />
       <div
-        className={`w-full rounded-t-sheet bg-sand-50 px-6 pb-6 pt-3 transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-night-800 ${
+        ref={sheetRef}
+        className={`relative w-full rounded-t-sheet bg-sand-50 px-6 pb-6 pt-3 transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-night-800 ${
           entered ? 'translate-y-0' : 'translate-y-full'
         }`}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-[5px] w-11 rounded-full bg-sand-300 dark:bg-night-500" />
-        <h2 className="text-center font-display text-xl font-bold dark:text-mist-50">
-          Que se passe-t-il ?
-        </h2>
+        <div className="flex items-center justify-between">
+          <span className="w-11" aria-hidden="true" />
+          <h2 className="flex-1 text-center font-display text-xl font-bold dark:text-mist-50">
+            Que se passe-t-il ?
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-sand-100 dark:bg-night-700"
+          >
+            <X size={18} className="text-ink-700 dark:text-mist-200" />
+          </button>
+        </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           {TYPES.map(({ id, icon: Icon }) => {
